@@ -66,13 +66,13 @@ Nutze die anderen Bereiche ausschließlich über die Verträge in `src/core/`.
 ## Phase 2 – Zusammenführen
 **Modell: Opus. Branch: `main`. Erst starten, wenn alle drei Listen erledigt sind.**
 
-- [ ] C2-1 Branches nacheinander nach `main` mergen: `codex`, dann `claude`, dann `opencode`. Konflikte sauber lösen.
-- [ ] C2-2 Platzhalter entfernen, die jetzt überflüssig sind; alles richtig verdrahten.
-- [ ] C2-3 `npm run check` und `npm run e2e`. Einen Playwright-Test ergänzen, der 60 Sekunden spielt
+- [x] C2-1 Branches nacheinander nach `main` mergen: `codex`, dann `claude`, dann `opencode`. Konflikte sauber lösen.
+- [x] C2-2 Platzhalter entfernen, die jetzt überflüssig sind; alles richtig verdrahten.
+- [x] C2-3 `npm run check` und `npm run e2e`. Einen Playwright-Test ergänzen, der 60 Sekunden spielt
       (Welt erzeugen, laufen, Block abbauen, Block setzen, Inventar öffnen) und Screenshots macht.
       Screenshots ansehen, gefundene Fehler beheben.
-- [ ] C2-4 Alle Dateien in `notes/` lesen, sinnvolle Vertragswünsche umsetzen, `[!]`-Aufgaben prüfen.
-- [ ] C2-5 Kurzen Bericht `docs/RUNDE.md` schreiben: was funktioniert, was nicht, bekannte Fehler.
+- [x] C2-4 Alle Dateien in `notes/` lesen, sinnvolle Vertragswünsche umsetzen, `[!]`-Aufgaben prüfen.
+- [x] C2-5 Kurzen Bericht `docs/RUNDE.md` schreiben: was funktioniert, was nicht, bekannte Fehler.
 - [ ] C2-6 Neue Aufgabenlisten für die nächste Runde in `tasks/` schreiben – gleiches Format, gleiche Ordner-Zuständigkeiten,
       schwere Engine-Aufgaben an Codex, kleine klare Aufgaben an OpenCode. Offene Fehler zuerst.
       Kandidaten: Tiere und Monster, fließendes Wasser, Biome, Öfen/Schmelzen, Truhen, Sounds (prozedural), Partikel.
