@@ -69,6 +69,12 @@ Platzhalter entfernt: Der Autostart der „Platzhalter-Welt“ in `main.ts` ist 
 Darstellung, Schaden), der alle drei Bereiche berührt. Er wird in Phase 2 von Runde 2 vorbereitet, wenn
 Wasser, Biome und Öfen stehen.
 
+## Notizen der Agents
+
+Die Notizdateien in `notes/` sind für Runde 2 geleert. Die Entscheidungen aus Runde 1 (u. a. die Begründungen der
+Verträge aus Phase 0 und die Performance-Messung von Codex) stehen in der Git-Historie:
+`git show 607a91c:notes/claude.md`, `…:notes/codex.md`, `…:notes/opencode.md`.
+
 ## Wie geprüft wurde
 
 - `npm run check` – TypeScript, 181 Unit-Tests, Produktions-Build.
