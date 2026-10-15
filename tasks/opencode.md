@@ -13,7 +13,7 @@ Oberfläche als HTML/CSS-Overlay über dem Canvas (kein Framework). Pixeliger Lo
       (Fackel 14), Drop (Stein → Bruchstein, Gras → Erde, Blätter → nichts), bevorzugtes Werkzeug.
 - [x] O3 Items in `src/data/items.ts`: Stock, Kohle, Werkzeuge aus Holz und Stein (Spitzhacke, Axt, Schaufel, Schwert)
       mit Haltbarkeit und Abbau-Geschwindigkeit.
-- [ ] O4 Rezepte in `src/data/recipes.ts`: Bretter aus Stamm, Stöcke, Werkbank, Fackeln, alle Werkzeuge aus O3.
+- [x] O4 Rezepte in `src/data/recipes.ts`: Bretter aus Stamm, Stöcke, Werkbank, Fackeln, alle Werkzeuge aus O3.
       Ein Test prüft, dass jedes Rezept nur existierende Items verwendet.
 - [ ] O5 Hotbar unten mittig: 9 Slots, Auswahlrahmen, Item-Symbol (aus der Textur), Anzahl, Haltbarkeitsbalken.
 - [ ] O6 Inventar-Bildschirm (Taste E): 27 + 9 Slots, 2×2-Crafting mit Ergebnis-Slot, Item am Mauszeiger,

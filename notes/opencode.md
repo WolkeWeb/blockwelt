@@ -15,6 +15,9 @@
 - **O3 – Items:** Werkzeugwerte: Holz Stufe 1/Speed 2/Haltbarkeit 59, Stein Stufe 2/Speed 4/Haltbarkeit 131.
   Schaden in halben Herzen: Spitzhacke 2/3, Axt 3/4, Schaufel 2/3, Schwert 4/5 (Holz/Stein).
   Anzeigenamen wie „Holzspitzhacke", „Steinschwert" (Material + Werkzeug kleingeschrieben).
+- **O4 – Rezepte:** Werkzeuge nach Lehrbuchmuster (Spitzhacke 3×3, Axt 2×3, Schaufel/Schwert 1×3 –
+  letztere passen nur an die Werkbank). Holz-Werkzeuge kosten Bretter, Stein-Werkzeuge Bruchstein.
+  Fackel = Kohle über Stock, ergibt 4. Stock = 2 Bretter übereinander, ergibt 4.
 
 ## Wünsche an die Verträge
 
