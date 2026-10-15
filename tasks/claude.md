@@ -28,7 +28,7 @@ ohne Rückfrage bauen können. Jeder Bereich bekommt eine einfache, funktioniere
       - `game.ts`: GameApi für die Oberfläche: Zustand (Inventar, Hotbar-Auswahl, Leben, Luft, Modus, Tageszeit,
         Abbau-Fortschritt, offener Bildschirm) + Aktionen (Slot klicken/verschieben, craften, Welt starten/laden,
         Pause, Einstellungen) + typisierter Event-Bus
-- [ ] C0-4 Platzhalter-Implementierungen, alles lauffähig:
+- [x] C0-4 Platzhalter-Implementierungen, alles lauffähig:
       `world/` flache Welt mit einfachem Meshing (eine Farbe pro Block), `physics/` freies Fliegen ohne Kollision
       plus einfacher Raycast, `render/` Grundszene, `ui/` nur ein Fadenkreuz,
       `data/` fünf Blöcke (Gras, Erde, Stein, Holzstamm, Blätter) ohne Texturen, `game/` minimaler GameApi-Stub.

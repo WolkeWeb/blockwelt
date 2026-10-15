@@ -42,6 +42,16 @@
   - Zustand ist ein unveränderlicher Schnappschuss; `change`-Event höchstens einmal pro Frame.
   - `createEventBus` liegt als kleiner gemeinsamer Baustein in `core/events.ts` (einzige Implementierung in `core/`
     außer winzigen Hilfsfunktionen wie `toChunkCoord`).
+- **C0-4 Platzhalter:** Jeder Bereich exportiert seine Fabrik über `index.ts` mit dem Vertrags-Typ
+  (`createRegistry`, `createTextureAtlas`, `createWorld`, `stepPlayer`/`raycast`, `createRenderer`, `createUi`).
+  Die Implementierungen dahinter sind bewusst schlicht und dürfen in Phase 1 komplett ersetzt werden.
+  - `data/`: fünf Blöcke + Luft, Block-Items automatisch, keine Rezepte. `buildRegistry` füllt ID-Lücken mit Platzhaltern.
+  - `assets/`: `createTextureAtlas` liefert `null` (Atlas kommt mit O1) – alle zeichnen Farben.
+  - `world/`: flache Welt (Gras auf Y 63), synchron, max. 4 Chunks pro `update`, Meshing mit Flächen-Culling.
+  - `render/`: `MeshBasicMaterial` mit Vertex-Farben, Himmel als Hintergrundfarbe + Nebel, Helligkeit über `skyLight`.
+  - `ui/`: nur Fadenkreuz.
+  - `game/`: Stub mit Freiflug, Maus-Blick, Tasten E/F3/1–9/Mausrad, Tageszeit, Auswahlrahmen. Kein Abbauen, kein Speichern.
+  - Tests anderer Bereiche bauen sich ihre Testdaten selbst (z. B. eigene `BlockDef`s), statt `src/data` zu importieren.
 
 ## Wünsche an die Verträge
 
