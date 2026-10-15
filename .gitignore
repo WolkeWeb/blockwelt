@@ -1,0 +1,29 @@
+# Abhängigkeiten
+node_modules/
+
+# Build
+dist/
+*.tsbuildinfo
+
+# Tests
+test-results/
+playwright-report/
+blob-report/
+playwright/.cache/
+coverage/
+
+# Logs
+*.log
+npm-debug.log*
+
+# Editor / Betriebssystem
+.vscode/*
+!.vscode/extensions.json
+.idea/
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Lokale Umgebungen
+.env
+.env.*
