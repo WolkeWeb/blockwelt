@@ -61,6 +61,10 @@
   `LinearSRGBColorSpace`), damit `BlockDef.color` so aussieht wie angegeben. Codex darf das beim echten Renderer anders lösen.
 - **C0-5 Kleinkram:** leeres Favicon (`data:,`) in `index.html`, sonst meldet der Browser einen 404-Fehler in der Konsole;
   `chunkSizeWarningLimit` 1500 kB wegen three.js.
+- **C0-6 Smoketest** (`e2e/smoke.spec.ts`): wartet, bis `screen === 'playing'` und Chunks mit Dreiecken gezeichnet sind,
+  speichert `test-results/smoke.png` und prüft die Pixel (oben Himmel ≠ unten Boden). Dafür gibt es einen kleinen
+  PNG-Decoder in `e2e/png.ts` (Node-`zlib`, kein neues Paket). Jeder `console.error` und jede unbehandelte Ausnahme
+  lässt den Test fehlschlagen.
 
 ## Wünsche an die Verträge
 
