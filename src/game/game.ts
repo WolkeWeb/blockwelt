@@ -18,6 +18,7 @@ import {
   createEventBus,
   directionFromAngles,
   toChunkCoord,
+  type AtlasLayout,
   type CameraState,
   type ClickButton,
   type CraftingState,
@@ -82,6 +83,8 @@ export interface GameDeps {
   readonly createWorld: CreateWorld;
   readonly stepPlayer: StepPlayer;
   readonly raycast: Raycast;
+  /** Atlas-Layout für die Textur-Koordinaten der Chunk-Meshes, oder `null` (dann zeichnet die Welt Blockfarben). */
+  readonly atlas: AtlasLayout | null;
   /** Speicher für Welten und Einstellungen. Ohne Angabe: Arbeitsspeicher (geht beim Neuladen verloren). */
   readonly store?: SaveStore;
   /** Spiel-Canvas (für Pointer-Lock und Eingaben). */
@@ -379,7 +382,7 @@ class GameImpl implements Game {
     this.stopTracking?.();
     this.world?.dispose();
     this.setScreen('loading');
-    const world = this.deps.createWorld({ seed: info.seed, blocks: this.registry.blocks, atlas: null });
+    const world = this.deps.createWorld({ seed: info.seed, blocks: this.registry.blocks, atlas: this.deps.atlas });
     this.world = world;
     this.worldInfo = info;
     this.tracker = new ChangeTracker();
@@ -520,7 +523,7 @@ class GameImpl implements Game {
   }
 
   respawn(): void {
-    if (this.screen !== 'dead' && this.screen !== 'paused') return;
+    if (this.screen !== 'dead') return;
     this.vitals = freshVitals();
     this.deathCause = null;
     this.flying = false;
@@ -547,7 +550,7 @@ class GameImpl implements Game {
     this.dirty = true;
   }
 
-  // ----- Inventar (Phase 0: nur Hotbar-Auswahl) -----
+  // ----- Inventar und Crafting -----
 
   selectHotbarSlot(index: number): void {
     const selected = ((Math.round(index) % 9) + 9) % 9;
@@ -656,6 +659,8 @@ class GameImpl implements Game {
     if (this.input.consumePress('Escape')) {
       if (this.screen === 'inventory' || this.screen === 'workbench') this.setScreen('playing');
       else if (this.screen === 'paused') this.resume();
+      // Läuft das Spiel ohne Pointer-Lock (z. B. nach dem Schließen des Inventars mit Esc), öffnet Esc das Pausenmenü.
+      else if (this.screen === 'playing' && !this.input.locked) this.pause();
     }
     if (this.screen !== 'playing') return;
     for (let i = 0; i < 9; i++) if (this.input.consumePress(`Digit${i + 1}`)) this.selectHotbarSlot(i);
@@ -760,7 +765,8 @@ class GameImpl implements Game {
     if (this.input.isButtonDown(0) && hit) this.updateBreaking(world, hit);
     else this.resetBreaking();
 
-    if (placeClick && hit && hit.blockId === BLOCK.CRAFTING_TABLE && !this.input.isDown('ShiftLeft')) {
+    const sneaking = this.input.isDown('ShiftLeft') || this.input.isDown('ShiftRight');
+    if (placeClick && hit && hit.blockId === BLOCK.CRAFTING_TABLE && !sneaking) {
       this.setScreen('workbench');
       return;
     }

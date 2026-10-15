@@ -4,6 +4,7 @@
  * - Logik: fester Zeitschritt mit 20 Ticks pro Sekunde (Akkumulator, höchstens 5 Ticks Nachholen pro Frame).
  * - Darstellung: `requestAnimationFrame`, Kamera zwischen zwei Ticks interpoliert.
  * - Pointer-Lock: Klick aufs Canvas → Spiel fortsetzen; Verlust des Locks (Esc) → Pause.
+ * - Gestartet wird im Titelbildschirm der Oberfläche; Welten legt der Spieler über das Menü an.
  *
  * Zuständig: Claude Code
  */
@@ -43,15 +44,6 @@ function showFatalError(root: HTMLElement, error: unknown): void {
   root.append(box);
 }
 
-const PLACEHOLDER_WORLD = 'Platzhalter-Welt';
-
-/** Lädt die zuletzt gespeicherte Platzhalter-Welt oder legt sie neu an. */
-async function startPlaceholderWorld(game: Game): Promise<void> {
-  const existing = (await game.listWorlds()).find((world) => world.name === PLACEHOLDER_WORLD);
-  if (existing) await game.loadWorld(existing.id);
-  else await game.createWorld({ name: PLACEHOLDER_WORLD, seed: '1', mode: 'creative' });
-}
-
 function start(): void {
   const canvas = document.querySelector<HTMLCanvasElement>('#game');
   const uiRoot = document.querySelector<HTMLElement>('#ui');
@@ -67,7 +59,16 @@ function start(): void {
     return;
   }
 
-  const game = createGame({ registry, renderer, createWorld, stepPlayer, raycast, store: createSaveStore(), canvas });
+  const game = createGame({
+    registry,
+    renderer,
+    createWorld,
+    stepPlayer,
+    raycast,
+    atlas: atlas?.layout ?? null,
+    store: createSaveStore(),
+    canvas,
+  });
   createUi({ root: uiRoot, game, atlas });
   window.__blockwelt = { game };
 
@@ -81,10 +82,6 @@ function start(): void {
     if (document.visibilityState === 'hidden') void game.saveNow();
   });
   window.addEventListener('pagehide', () => void game.saveNow());
-
-  // Solange die Oberfläche kein Menü hat (Phase 0/1): direkt die Platzhalter-Welt laden oder anlegen.
-  // Mit `?menu` in der Adresse wird nichts gestartet (dann übernimmt die Oberfläche).
-  if (!new URLSearchParams(location.search).has('menu')) void startPlaceholderWorld(game);
 
   const tickMs = TICK_SECONDS * 1000;
   const startTime = performance.now();
