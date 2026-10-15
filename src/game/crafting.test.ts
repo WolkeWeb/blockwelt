@@ -87,3 +87,17 @@ describe('Ergebnis und Verbrauch', () => {
     expect(consumeIngredients(before)).toEqual([{ item: 'log', count: 2 }, null, null, null]);
   });
 });
+
+describe('Muster mit Leerzeichen am Rand', () => {
+  const padded: Recipe[] = [
+    { type: 'shaped', id: 'rod', pattern: [' S ', ' S '], key: { S: 'stick' }, result: { item: 'rod', count: 1 } },
+  ];
+  const s: ItemStack = { item: 'stick', count: 1 };
+
+  it('passt, obwohl das Muster leere Randspalten hat', () => {
+    // 3×3: Stöcke links untereinander
+    expect(craftResult(padded, [s, null, null, s, null, null, null, null, null], 3)).toEqual({ item: 'rod', count: 1 });
+    // 2×2: rechts untereinander
+    expect(craftResult(padded, [null, s, null, s], 2)).toEqual({ item: 'rod', count: 1 });
+  });
+});

@@ -94,6 +94,8 @@ export const createUi: CreateUi = ({ root, game, atlas }) => {
     for (const [screen, panel] of panels) setVisible(panel.element, screen === state.screen);
     if (active && changed) active.onShow?.();
     active?.update(state);
+    // Den Stapel am Mauszeiger zeichnen nur Inventar und Werkbank. Sind sie zu, darf kein altes Symbol stehen bleiben.
+    if (state.screen !== 'inventory' && state.screen !== 'workbench') cursor.update(null, 0, 0, false);
 
     hud.update(state);
     setVisible(dim, state.screen !== 'playing');

@@ -18,6 +18,15 @@ describe('Meshing', () => {
     expect(ys).not.toContain(2.875);
     expect(mesh([[1, 2, 1, BLOCK.GLASS], [2, 2, 1, BLOCK.GLASS]]).cutout.indices.length).toBe(60);
   });
+  it('zeichnet Fackeln als zwei gekreuzte Flächen statt als vollen Würfel', () => {
+    const result = mesh([[3, 2, 3, BLOCK.TORCH], [3, 1, 3, BLOCK.STONE]]);
+    expect(result.cutout.indices.length).toBe(12);
+    const xs = Array.from(result.cutout.positions).filter((_, i) => i % 3 === 0);
+    expect(Math.min(...xs)).toBeGreaterThan(3);
+    expect(Math.max(...xs)).toBeLessThan(4);
+    // Der Stein darunter behält seine Oberseite (die Fackel verdeckt nichts).
+    expect(result.opaque.indices.length).toBe(36);
+  });
   it('entfernt innere Flächen, auch an Chunk-Grenzen', () => {
     expect(mesh([[0, 2, 0, BLOCK.STONE]]).opaque.indices.length).toBe(36);
     expect(mesh([[0, 2, 0, BLOCK.STONE], [1, 2, 0, BLOCK.STONE]]).opaque.indices.length).toBe(60);

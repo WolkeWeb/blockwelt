@@ -759,10 +759,12 @@ class GameImpl implements Game {
   private updateInteraction(world: World): void {
     if (this.actionCooldown > 0) this.actionCooldown--;
     const placeClick = this.input.consumeClick(2);
-    this.input.consumeClick(0);
+    // Ein kurzer Klick zählt auch dann, wenn die Taste vor dem nächsten Tick schon wieder losgelassen war
+    // (bei niedriger Bildrate sonst verloren – wichtig für sofortiges Abbauen im Kreativmodus).
+    const breakClick = this.input.consumeClick(0);
     const hit = this.target;
 
-    if (this.input.isButtonDown(0) && hit) this.updateBreaking(world, hit);
+    if ((this.input.isButtonDown(0) || breakClick) && hit) this.updateBreaking(world, hit);
     else this.resetBreaking();
 
     const sneaking = this.input.isDown('ShiftLeft') || this.input.isDown('ShiftRight');

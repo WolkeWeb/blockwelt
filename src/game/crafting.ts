@@ -38,10 +38,17 @@ function trimmedGrid(grid: readonly (ItemStack | null)[], size: number): Cell[][
   return rows;
 }
 
+/** Zellen des Musters, auf den belegten Rahmen beschnitten (Leerzeilen/-spalten am Rand zählen nicht). */
 function patternCells(recipe: ShapedRecipe): Cell[][] {
-  return recipe.pattern.map((line) =>
-    [...line].map((ch) => (ch === ' ' ? null : (recipe.key[ch] ?? null))),
-  );
+  const rows = recipe.pattern.map((line) => [...line].map((ch) => (ch === ' ' ? null : (recipe.key[ch] ?? null))));
+  const width = Math.max(0, ...rows.map((row) => row.length));
+  const grid = rows.map((row) => Array.from({ length: width }, (_, c) => row[c] ?? null));
+  const usedRows = grid.map((row, r) => (row.some((cell) => cell !== null) ? r : -1)).filter((r) => r >= 0);
+  const usedCols = Array.from({ length: width }, (_, c) => c).filter((c) => grid.some((row) => row[c] !== null));
+  if (usedRows.length === 0) return [];
+  const [r0, r1] = [usedRows[0]!, usedRows[usedRows.length - 1]!];
+  const [c0, c1] = [usedCols[0]!, usedCols[usedCols.length - 1]!];
+  return grid.slice(r0, r1 + 1).map((row) => row.slice(c0, c1 + 1));
 }
 
 function sameCells(a: readonly (readonly Cell[])[], b: readonly (readonly Cell[])[]): boolean {

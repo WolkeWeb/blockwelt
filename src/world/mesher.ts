@@ -1,6 +1,6 @@
 /**
- * Einfaches Meshing (PLATZHALTER aus Phase 0): nur sichtbare Flächen, eine Farbe pro Block,
- * kein Atlas, keine Ambient Occlusion, volles Himmelslicht.
+ * Meshing eines Chunks: nur sichtbare Flächen, Textur-Koordinaten aus dem Atlas (ohne Atlas Blockfarben),
+ * Ambient Occlusion pro Ecke, gebackenes Himmels- und Blocklicht, getrennt nach Render-Durchgängen.
  */
 import {
   CHUNK_HEIGHT,
@@ -56,6 +56,34 @@ class BufferBuilder {
     else this.indices.push(base, base + 1, base + 2, base, base + 2, base + 3);
   }
 
+  /**
+   * Zwei sich kreuzende senkrechte Flächen durch die Blockmitte (Form `cross` und `torch`).
+   * Die Textur wird ganz gezeigt; durchsichtige Pixel fallen per Alpha-Test weg, so bleibt von der Fackel
+   * nur der schmale Stab mit Flamme übrig. Beide Seiten sind sichtbar (Cutout-Material ist doppelseitig).
+   */
+  addCross(x: number, y: number, z: number, color: number, rect: UVRect | undefined, light: readonly [number, number]): void {
+    const r = ((color >> 16) & 0xff) / 255;
+    const g = ((color >> 8) & 0xff) / 255;
+    const b = (color & 0xff) / 255;
+    const uv = rect ? [rect.u0, rect.v1, rect.u1, rect.v1, rect.u1, rect.v0, rect.u0, rect.v0] : [-1, -1, -1, -1, -1, -1, -1, -1];
+    const quads: readonly (readonly [number, number, number][])[] = [
+      [[0.15, 0, 0.15], [0.85, 0, 0.85], [0.85, 1, 0.85], [0.15, 1, 0.15]],
+      [[0.85, 0, 0.15], [0.15, 0, 0.85], [0.15, 1, 0.85], [0.85, 1, 0.15]],
+    ];
+    const normals = [[Math.SQRT1_2, 0, -Math.SQRT1_2], [-Math.SQRT1_2, 0, -Math.SQRT1_2]];
+    quads.forEach((corners, q) => {
+      const base = this.positions.length / 3;
+      corners.forEach(([cx, cy, cz], i) => {
+        this.positions.push(x + cx, y + cy, z + cz);
+        this.normals.push(normals[q][0], normals[q][1], normals[q][2]);
+        this.uvs.push(uv[i * 2], uv[i * 2 + 1]);
+        this.colors.push(r, g, b);
+        this.light.push(...light);
+      });
+      this.indices.push(base, base + 1, base + 2, base, base + 2, base + 3);
+    });
+  }
+
   build(): MeshBuffers {
     return {
       positions: new Float32Array(this.positions),
@@ -96,6 +124,13 @@ export function buildChunkMesh(
         if (!block || block.transparency === 'invisible' || block.shape === 'none') continue;
         const target =
           block.transparency === 'opaque' ? opaque : block.transparency === 'cutout' ? cutout : translucent;
+        if (block.shape === 'torch' || block.shape === 'cross') {
+          const px = ox + lx, pz = oz + lz;
+          const rect = block.textures ? atlas?.regions[block.textures.north] : undefined;
+          const light = getLight(px, y, pz);
+          target.addCross(lx, y, lz, rect ? 0xffffff : block.color, rect, [light[0], Math.max(light[1], block.lightLevel / 15)]);
+          continue;
+        }
         for (const face of FACES) {
           const n = FACE_NORMALS[face];
           const neighborId = getBlock(ox + lx + n.x, y + n.y, oz + lz + n.z);

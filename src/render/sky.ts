@@ -1,6 +1,8 @@
 ﻿import * as THREE from 'three';
 import type { DayTime, Vec3 } from '../core';
 
+const CLOUD_WHITE = new THREE.Color(0xffffff);
+
 export function skyPalette(day: Pick<DayTime, 'skyLight' | 'sunAngle'>): { horizon: THREE.Color; zenith: THREE.Color } {
   const daylight = THREE.MathUtils.clamp((day.skyLight - 0.2) / 0.8, 0, 1);
   const dusk = Math.pow(1 - Math.abs(Math.sin(day.sunAngle)), 8);
@@ -43,7 +45,9 @@ export class Sky {
     }
     const geometry = new THREE.BufferGeometry(); geometry.setAttribute('position', new THREE.Float32BufferAttribute(points, 3));
     this.stars = new THREE.Points(geometry, new THREE.PointsMaterial({ color: 0xe4edff, size: 1.5, sizeAttenuation: false,
-      transparent: true, depthWrite: false, depthTest: false, fog: false }));
+      // depthTest bleibt an: Sterne sind transparent und landen deshalb im Transparenz-Durchgang NACH dem Gelände;
+      // ohne Tiefentest würden sie als weiße Punkte vor Bergen und Blöcken erscheinen.
+      transparent: true, depthWrite: false, depthTest: true, fog: false }));
     this.stars.renderOrder = -900;
     this.stars.frustumCulled = false;
     this.clouds = new THREE.InstancedMesh(new THREE.BoxGeometry(12, 1.5, 8),
@@ -70,7 +74,9 @@ export class Sky {
       disk.visible = !underwater && disk.position.y > -radius * 0.06;
     }
     this.dome.visible = !underwater; this.clouds.visible = !underwater;
-    (this.clouds.material as THREE.MeshBasicMaterial).color.setScalar(0.25 + day.skyLight * 0.75);
+    // Wolken folgen der Himmelsfarbe: tagsüber fast weiß, nachts dunkel statt hellgrau vor dem Sternenhimmel.
+    const daylight = THREE.MathUtils.clamp((day.skyLight - 0.2) / 0.8, 0, 1);
+    (this.clouds.material as THREE.MeshBasicMaterial).color.copy(palette.horizon).lerp(CLOUD_WHITE, 0.1 + daylight * 0.85);
     const span = far * 1.6, spacing = span / 8;
     const wrap = (v: number) => ((v + span / 2) % span + span) % span - span / 2;
     for (let i = 0; i < 64; i++) {

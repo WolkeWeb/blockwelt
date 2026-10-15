@@ -40,6 +40,17 @@ function toGeometry(buffers: MeshBuffers): THREE.BufferGeometry | null {
   return geometry;
 }
 
+/**
+ * Überträgt Position und Blickrichtung aus dem Vertrag auf eine three.js-Kamera.
+ * Vertrag: `pitch` positiv = nach oben, `yaw` wie `rotation.y` – die Kamera blickt also genau
+ * in Richtung `directionFromAngles(yaw, pitch)`, wie Raycast und Spiellogik.
+ */
+export function applyCameraState(target: THREE.Camera, camera: Pick<CameraState, 'position' | 'yaw' | 'pitch'>): void {
+  target.rotation.order = 'YXZ';
+  target.position.set(camera.position.x, camera.position.y, camera.position.z);
+  target.rotation.set(camera.pitch, camera.yaw, 0);
+}
+
 class BasicRenderer implements Renderer {
   private renderer: THREE.WebGLRenderer | null = null;
   private canvas: HTMLCanvasElement | null = null;
@@ -170,16 +181,15 @@ class BasicRenderer implements Renderer {
     (this.scene.background as THREE.Color).copy(background);
     this.fog.color.copy(background);
     const far = this.renderDistance * CHUNK_SIZE;
-    this.fog.near = camera.underwater ? 2 : far * 0.6;
-    this.fog.far = camera.underwater ? 24 : far;
+    this.fog.near = camera.underwater ? 0.5 : far * 0.6;
+    this.fog.far = camera.underwater ? 14 : far;
     this.sunLight.value = light;
 
     if (this.camera.fov !== camera.fov) {
       this.camera.fov = camera.fov;
       this.camera.updateProjectionMatrix();
     }
-    this.camera.position.set(camera.position.x, camera.position.y, camera.position.z);
-    this.camera.rotation.set(-camera.pitch, camera.yaw, 0);
+    applyCameraState(this.camera, camera);
     this.culler.update(this.chunks.values(), this.camera);
     for (const group of this.chunks.values()) if (group.visible) for (const child of group.children) {
       if (child.userData.translucent && child.visible) {

@@ -239,6 +239,15 @@
   grid-template-columns: repeat(9, 40px);
 }
 
+/* Crafting-Raster: 2×2 im Inventar, 3×3 an der Werkbank (Slots zeilenweise, wie im Vertrag). */
+.bw-grid-2 {
+  grid-template-columns: repeat(2, 40px);
+}
+
+.bw-grid-3 {
+  grid-template-columns: repeat(3, 40px);
+}
+
 .bw-arrow {
   font-size: 24px;
   color: #cfcfcf;
