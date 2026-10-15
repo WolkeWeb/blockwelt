@@ -15,7 +15,7 @@ export function executeJob(job: EngineJob, options: WorldOptions, terrain: Terra
     if (y < 0) return BLOCK.BEDROCK;
     if (y >= CHUNK_HEIGHT) return BLOCK.AIR;
     return job.halo[haloIndex(x - job.cx * CHUNK_SIZE, y, z - job.cz * CHUNK_SIZE)];
-  });
+  }, options.atlas);
 }
 
 /** Bounded pool, no unbounded job queue or main-thread work in browsers. */

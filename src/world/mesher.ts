@@ -12,6 +12,8 @@ import {
   type ChunkMesh,
   type Face,
   type MeshBuffers,
+  type AtlasLayout,
+  type UVRect,
 } from '../core';
 
 /** Eckpunkte jeder Fläche (gegen den Uhrzeigersinn von außen gesehen), relativ zur Blockecke. */
@@ -35,22 +37,23 @@ class BufferBuilder {
   light: number[] = [];
   indices: number[] = [];
 
-  addFace(x: number, y: number, z: number, face: Face, color: number): void {
+  addFace(x: number, y: number, z: number, face: Face, color: number, ao: number[], rect?: UVRect): void {
     const base = this.positions.length / 3;
     const n = FACE_NORMALS[face];
     const shade = FACE_SHADE[face];
     const r = ((color >> 16) & 0xff) / 255;
     const g = ((color >> 8) & 0xff) / 255;
     const b = (color & 0xff) / 255;
-    const uv = [0, 1, 1, 1, 1, 0, 0, 0];
+    const uv = rect ? [rect.u0, rect.v1, rect.u1, rect.v1, rect.u1, rect.v0, rect.u0, rect.v0] : [-1, -1, -1, -1, -1, -1, -1, -1];
     FACE_CORNERS[face].forEach(([cx, cy, cz], i) => {
       this.positions.push(x + cx, y + cy, z + cz);
       this.normals.push(n.x, n.y, n.z);
       this.uvs.push(uv[i * 2], uv[i * 2 + 1]);
-      this.colors.push(r * shade, g * shade, b * shade);
+      this.colors.push(r * shade * ao[i], g * shade * ao[i], b * shade * ao[i]);
       this.light.push(1, 0);
     });
-    this.indices.push(base, base + 1, base + 2, base, base + 2, base + 3);
+    if (ao[0] + ao[2] > ao[1] + ao[3]) this.indices.push(base, base + 1, base + 3, base + 1, base + 2, base + 3);
+    else this.indices.push(base, base + 1, base + 2, base, base + 2, base + 3);
   }
 
   build(): MeshBuffers {
@@ -75,6 +78,7 @@ export function buildChunkMesh(
   revision: number,
   blocks: readonly BlockDef[],
   getBlock: BlockLookup,
+  atlas: AtlasLayout | null = null,
 ): ChunkMesh {
   const opaque = new BufferBuilder();
   const cutout = new BufferBuilder();
@@ -98,7 +102,21 @@ export function buildChunkMesh(
           const hidden =
             neighbor !== undefined &&
             (neighbor.transparency === 'opaque' || (neighborId === id && block.transparency !== 'opaque'));
-          if (!hidden) target.addFace(lx, y, lz, face, block.color);
+          if (!hidden) {
+            const px = ox + lx, pz = oz + lz;
+            const axes = [n.x, n.y, n.z].map((v, i) => v === 0 ? i : -1).filter(i => i >= 0);
+            const occludes = (offset: number[]) => def(getBlock(px + n.x + offset[0], y + n.y + offset[1], pz + n.z + offset[2]))?.transparency === 'opaque';
+            const ao = FACE_CORNERS[face].map(corner => {
+              const a = [0, 0, 0], b = [0, 0, 0];
+              a[axes[0]] = corner[axes[0]] === 0 ? -1 : 1;
+              b[axes[1]] = corner[axes[1]] === 0 ? -1 : 1;
+              const sa = Number(occludes(a)), sb = Number(occludes(b));
+              const diagonal = Number(occludes(a.map((v, i) => v + b[i])));
+              return 1 - 0.2 * (sa && sb ? 3 : sa + sb + diagonal);
+            });
+            const rect = block.textures ? atlas?.regions[block.textures[face]] : undefined;
+            target.addFace(lx, y, lz, face, rect ? 0xffffff : block.color, ao, rect);
+          }
         }
       }
     }

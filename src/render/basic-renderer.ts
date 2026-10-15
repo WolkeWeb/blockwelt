@@ -18,6 +18,7 @@ import {
   type Unsubscribe,
   type Vec3,
   type World,
+  type RendererOptions,
 } from '../core';
 
 THREE.ColorManagement.enabled = false;
@@ -61,8 +62,23 @@ class BasicRenderer implements Renderer {
   private unsubscribers: Unsubscribe[] = [];
   private renderDistance = DEFAULT_RENDER_DISTANCE;
   private breakProgress = 0;
+  private atlasTexture: THREE.CanvasTexture<HTMLCanvasElement | OffscreenCanvas> | null = null;
 
-  constructor() {
+  constructor(options: RendererOptions) {
+    if (options.atlas) {
+      this.atlasTexture = new THREE.CanvasTexture(options.atlas.image);
+      this.atlasTexture.flipY = false;
+      this.atlasTexture.magFilter = THREE.NearestFilter;
+      this.atlasTexture.minFilter = THREE.NearestFilter;
+      this.atlasTexture.generateMipmaps = false;
+      for (const material of Object.values(this.materials)) {
+        material.map = this.atlasTexture;
+        material.onBeforeCompile = shader => {
+          shader.fragmentShader = shader.fragmentShader.replace('#include <map_fragment>',
+            '#ifdef USE_MAP\nif (vMapUv.x >= 0.0) {\n#endif\n#include <map_fragment>\n#ifdef USE_MAP\n}\n#endif');
+        };
+      }
+    }
     this.camera.rotation.order = 'YXZ';
     this.scene.background = DAY_SKY.clone();
     this.scene.fog = this.fog;
@@ -181,6 +197,7 @@ class BasicRenderer implements Renderer {
   dispose(): void {
     this.setWorld(null);
     for (const material of Object.values(this.materials)) material.dispose();
+    this.atlasTexture?.dispose();
     this.selection.geometry.dispose();
     (this.selection.material as THREE.Material).dispose();
     this.renderer?.dispose();
@@ -189,4 +206,4 @@ class BasicRenderer implements Renderer {
 }
 
 /** Erzeugt den (Platzhalter-)Renderer. Registry und Atlas werden in Phase 0 noch nicht genutzt. */
-export const createBasicRenderer: CreateRenderer = () => new BasicRenderer();
+export const createBasicRenderer: CreateRenderer = options => new BasicRenderer(options);

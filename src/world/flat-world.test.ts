@@ -1,18 +1,8 @@
 ﻿import { describe, expect, it } from 'vitest';
-import { BLOCK, BLOCK_NAMES, type BlockDef, type ChunkMesh, type World } from '../core';
+import { BLOCK, type ChunkMesh, type World } from '../core';
+import { BLOCKS } from './test-blocks';
 import { createWorld } from './index';
 import { TerrainGenerator, blockIndex } from './terrain';
-
-export const BLOCKS: BlockDef[] = Object.values(BLOCK).sort((a, b) => a - b).map((id) => ({
-  id, name: BLOCK_NAMES[id], displayName: BLOCK_NAMES[id], hardness: id === BLOCK.BEDROCK ? -1 : 1,
-  solid: id !== BLOCK.AIR && id !== BLOCK.WATER && id !== BLOCK.TORCH,
-  transparency: id === BLOCK.AIR ? 'invisible' : id === BLOCK.WATER ? 'translucent' : id === BLOCK.LEAVES || id === BLOCK.GLASS || id === BLOCK.TORCH ? 'cutout' : 'opaque',
-  shape: id === BLOCK.AIR ? 'none' : id === BLOCK.WATER ? 'liquid' : id === BLOCK.TORCH ? 'torch' : 'cube',
-  lightLevel: id === BLOCK.TORCH ? 14 : 0,
-  lightOpacity: id === BLOCK.AIR || id === BLOCK.GLASS || id === BLOCK.TORCH ? 0 : id === BLOCK.LEAVES ? 1 : id === BLOCK.WATER ? 2 : 15,
-  replaceable: id === BLOCK.AIR || id === BLOCK.WATER, color: 0x808080, textures: null, drop: null,
-  preferredTool: null, requiredToolLevel: 0,
-}));
 
 function loadedWorld(): { world: World; meshes: ChunkMesh[] } {
   const world = createWorld({ seed: 1, blocks: BLOCKS, atlas: null });
@@ -56,6 +46,17 @@ describe('Terrain', () => {
 });
 
 describe('Welt', () => {
+  it('baut bei Änderungen nur betroffene Chunks und Grenznachbarn neu', () => {
+    const { world, meshes } = loadedWorld();
+    const update = () => { for (let i = 0; i < 10; i++) world.update({ x: 8, y: 70, z: 8 }, 2); };
+    update(); meshes.length = 0;
+    world.setBlock(8, 120, 8, BLOCK.STONE); update();
+    expect(meshes.map(m => `${m.cx},${m.cz}`)).toEqual(['0,0']);
+    meshes.length = 0;
+    world.setBlock(15, 120, 8, BLOCK.STONE); update();
+    expect(meshes.map(m => `${m.cx},${m.cz}`).sort()).toEqual(['0,0', '1,0']);
+    world.dispose();
+  });
   it('lädt zuerst den Spielerchunk, entlädt entfernte Daten und erhält Änderungen', () => {
     const world = createWorld({ seed: 1, blocks: BLOCKS, atlas: null });
     const loaded: string[] = [], unloaded: string[] = [];
@@ -94,3 +95,4 @@ describe('Welt', () => {
     world.dispose();
   });
 });
+
