@@ -30,6 +30,9 @@
   damit Klicks nicht beim Canvas landen.
 - **O7 – Werkbank:** Derselbe Aufbau wie das Inventar; nur das Crafting-Raster ist 3×3
   (`createContainerPanel('workbench')`). Panel und Slots werden wiederverwendet.
+- **O8 – HUD:** Herzen als 10 Text-Herzen mit geclipptem Füllstand (0/50/100 %); Luftblasen als kleine
+  Kreise, nur unter Wasser (`underwater`); Debug-Text mit FPS, Position, Chunk, Blickrichtung, Ziel,
+  Chunks/Draw-Calls/Dreiecke. F3 schaltet die Spiellogik – die Oberfläche liest nur `debugVisible`.
 
 ## Wünsche an die Verträge
 
