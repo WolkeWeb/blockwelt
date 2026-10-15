@@ -33,6 +33,12 @@
 - **O8 – HUD:** Herzen als 10 Text-Herzen mit geclipptem Füllstand (0/50/100 %); Luftblasen als kleine
   Kreise, nur unter Wasser (`underwater`); Debug-Text mit FPS, Position, Chunk, Blickrichtung, Ziel,
   Chunks/Draw-Calls/Dreiecke. F3 schaltet die Spiellogik – die Oberfläche liest nur `debugVisible`.
+- **O9 – Menüs:** `menus.ts` liefert Start-, Weltwahl-, Lade-, Pausen-, Einstellungs- und Todesbildschirm.
+  Die Einstellungen merken sich den Rücksprung (Titel oder Pause) über `settingsReturn` in `index.ts`.
+  Slider schreiben direkt über `updateSettings`; während des Ziehens überschreibt `update` die Werte nicht
+  (`document.activeElement`). Bei jeder Weltwahl wird `listWorlds()` neu geladen.
+  Ein dunkler Schleier (`.bw-dim`) und `pointer-events: auto` auf dem Overlay verhindern, dass Klicks
+  während eines Menüs beim Canvas landen.
 
 ## Wünsche an die Verträge
 

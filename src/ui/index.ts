@@ -15,6 +15,15 @@ import { el, setVisible } from './dom';
 import { createHud } from './hud';
 import { createIconPainter } from './icons';
 import { createContainerPanel, type Panel, type PanelContext } from './inventory';
+import {
+  createDeadPanel,
+  createLoadingPanel,
+  createPausedPanel,
+  createSettingsPanel,
+  createTitlePanel,
+  createWorldsPanel,
+  type MenuContext,
+} from './menus';
 import { createCursorLayer, createTooltip } from './slots';
 
 export const createUi: CreateUi = ({ root, game, atlas }) => {
@@ -34,15 +43,30 @@ export const createUi: CreateUi = ({ root, game, atlas }) => {
   root.append(container);
 
   const panels = new Map<Screen, Panel>();
+  let settingsReturn: Screen = 'title';
   let lastScreen: Screen | null = null;
+
+  const menuContext: MenuContext = { game, getReturnScreen: () => settingsReturn };
 
   function build(screen: Screen): Panel | null {
     switch (screen) {
+      case 'title':
+        return createTitlePanel(menuContext);
+      case 'worlds':
+        return createWorldsPanel(menuContext);
+      case 'loading':
+        return createLoadingPanel();
+      case 'paused':
+        return createPausedPanel(menuContext);
+      case 'settings':
+        return createSettingsPanel(menuContext);
       case 'inventory':
         return createContainerPanel('inventory', panelContext, cursor);
       case 'workbench':
         return createContainerPanel('workbench', panelContext, cursor);
-      default:
+      case 'dead':
+        return createDeadPanel(menuContext);
+      case 'playing':
         return null;
     }
   }
@@ -61,7 +85,10 @@ export const createUi: CreateUi = ({ root, game, atlas }) => {
 
   function render(state: GameState): void {
     const changed = state.screen !== lastScreen;
-    if (changed) tooltip.hide();
+    if (changed) {
+      if (state.screen === 'settings') settingsReturn = lastScreen === 'paused' ? 'paused' : 'title';
+      tooltip.hide();
+    }
 
     const active = panelFor(state.screen);
     for (const [screen, panel] of panels) setVisible(panel.element, screen === state.screen);
