@@ -125,6 +125,15 @@ export const BLOCKS: readonly BlockDef[] = [
     replaceable: true,
   }),
 
+  // Fließendes Wasser: wie Wasser (eigene ID, damit die Welt Quellen und Fließendes unterscheiden kann).
+  block(BLOCK.FLOWING_WATER, 'flowing_water', 'Fließendes Wasser', 0, 0x2f5fd0, all('water'), null, {
+    solid: false,
+    transparency: 'translucent',
+    shape: 'liquid',
+    lightOpacity: 2,
+    replaceable: true,
+  }),
+
   block(BLOCK.COAL_ORE, 'coal_ore', 'Kohleerz', 3, 0x6b6b6b, all('coal_ore'), { item: 'coal', count: 1 }, {
     preferredTool: 'pickaxe',
     requiredToolLevel: 1,
@@ -159,5 +168,17 @@ export const BLOCKS: readonly BlockDef[] = [
     shape: 'torch',
     lightLevel: 14,
     lightOpacity: 0,
+  }),
+
+  // Neu für Runde 2 (Verträge aus Phase 2). Vorläufig ohne Texturen – Texturen und Feinschliff: Aufgaben O12/O13.
+  block(BLOCK.FURNACE, 'furnace', 'Ofen', 3.5, 0x6e6e6e, null, { item: 'furnace', count: 1 }, {
+    preferredTool: 'pickaxe',
+    requiredToolLevel: 1,
+  }),
+  block(BLOCK.CHEST, 'chest', 'Truhe', 2.5, 0x9c6b30, null, { item: 'chest', count: 1 }, { preferredTool: 'axe' }),
+  block(BLOCK.SNOW, 'snow', 'Schnee', 0.2, 0xf0f5fa, null, { item: 'snow', count: 1 }, { preferredTool: 'shovel' }),
+  block(BLOCK.SANDSTONE, 'sandstone', 'Sandstein', 0.8, 0xd8c98f, null, { item: 'sandstone', count: 1 }, {
+    preferredTool: 'pickaxe',
+    requiredToolLevel: 1,
   }),
 ];

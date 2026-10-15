@@ -31,6 +31,8 @@ import type { BlockId, Face, GameMode, ItemStack, Unsubscribe, Vec3 } from './ty
  * - `settings`: Einstellungen (aus Titel oder Pause erreichbar)
  * - `inventory`: Inventar mit 2×2-Crafting
  * - `workbench`: Werkbank mit 3×3-Crafting
+ * - `furnace`: Ofen (Zutat, Brennstoff, Ergebnis) – nur per Rechtsklick auf einen Ofen
+ * - `chest`: Truhe (27 Slots) – nur per Rechtsklick auf eine Truhe
  * - `dead`: Todesbildschirm mit Respawn
  */
 export type Screen =
@@ -42,6 +44,8 @@ export type Screen =
   | 'settings'
   | 'inventory'
   | 'workbench'
+  | 'furnace'
+  | 'chest'
   | 'dead';
 
 /** Gespeicherte Welt in der Weltauswahl. */
@@ -81,6 +85,8 @@ export interface Settings {
   readonly fov: number;
   /** Mausempfindlichkeit als Faktor, 0,1–3 (Standard 1). */
   readonly mouseSensitivity: number;
+  /** Lautstärke der Geräusche 0–1 (Standard 0,8; 0 = stumm). */
+  readonly volume: number;
 }
 
 /**
@@ -88,11 +94,38 @@ export interface Settings {
  * - `inventory`: Index 0–8 = Hotbar (links nach rechts), 9–35 = Hauptinventar (3 Reihen à 9, oben links beginnend).
  * - `crafting`: Index im Crafting-Raster, zeilenweise (2×2: 0–3, 3×3: 0–8).
  * - `result`: der Ergebnis-Slot des Crafting-Rasters.
+ * - `container`: Slot des geöffneten Block-Behälters (siehe {@link BlockContainerState}):
+ *   Truhe 0–26 (3 Reihen à 9), Ofen 0 = Zutat, 1 = Brennstoff, 2 = Ergebnis (nur herausnehmen).
  */
 export type SlotRef =
   | { readonly area: 'inventory'; readonly index: number }
   | { readonly area: 'crafting'; readonly index: number }
-  | { readonly area: 'result' };
+  | { readonly area: 'result' }
+  | { readonly area: 'container'; readonly index: number };
+
+/**
+ * Inhalt des gerade geöffneten Block-Behälters (Truhe oder Ofen). Der Inhalt gehört zum Block in der Welt
+ * und wird mit der Welt gespeichert; wird der Block abgebaut, landet er im Inventar des Spielers.
+ * Shift-Klick verschiebt zwischen Behälter und Inventar (Ofen: Brennstoff in Slot 1, sonst in Slot 0).
+ */
+export type BlockContainerState =
+  | {
+      readonly kind: 'chest';
+      /** Position des Blocks. */
+      readonly position: Vec3;
+      /** Genau 27 Slots. */
+      readonly slots: readonly (ItemStack | null)[];
+    }
+  | {
+      readonly kind: 'furnace';
+      readonly position: Vec3;
+      /** Genau 3 Slots: 0 Zutat, 1 Brennstoff, 2 Ergebnis. */
+      readonly slots: readonly (ItemStack | null)[];
+      /** Restliche Brenndauer des aktuellen Brennstoffs 0–1 (für die Flammen-Anzeige). */
+      readonly burn: number;
+      /** Fortschritt des aktuellen Schmelzvorgangs 0–1 (für den Pfeil). */
+      readonly progress: number;
+    };
 
 /** Maustaste für Slot-Klicks. */
 export type ClickButton = 'left' | 'right';
@@ -154,6 +187,8 @@ export interface GameState {
   readonly mode: GameMode;
   /** Inventar und Crafting. */
   readonly inventory: InventoryState;
+  /** Geöffneter Block-Behälter (bei `screen` = `chest` oder `furnace`), sonst `null`. */
+  readonly container: BlockContainerState | null;
   /** Leben in halben Herzen, 0–`maxHealth`. */
   readonly health: number;
   /** Maximales Leben (20 = 10 Herzen). */
@@ -217,6 +252,10 @@ export interface GameEvents {
   saved: { readonly worldId: string };
   /** Kurze Meldung für den Spieler (z. B. als Einblendung). */
   message: { readonly text: string; readonly kind: 'info' | 'error' };
+  /** Ein Schritt des Spielers auf festem Boden (für Schrittgeräusche; Block unter den Füßen). Ca. alle 0,4 s beim Gehen. */
+  footstep: { readonly block: BlockId };
+  /** Ofen hat einen Schmelzvorgang beendet. */
+  smelted: { readonly stack: ItemStack };
 }
 
 /** Schnittstelle der Spiellogik für die Oberfläche. */

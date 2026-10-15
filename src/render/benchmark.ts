@@ -24,7 +24,7 @@ const blocks: BlockDef[] = Object.values(BLOCK).map(id => {
     textures: { top: name, bottom: name, north: name, south: name, east: name, west: name },
     drop: null, preferredTool: null, requiredToolLevel: 0 };
 });
-const registry: Registry = { blocks, items: [], recipes: [], textureNames: Object.keys(regions),
+const registry: Registry = { blocks, items: [], recipes: [], smelting: [], textureNames: Object.keys(regions),
   getBlockDef: id => blocks[id] ?? blocks[BLOCK.STONE], getBlockDefByName: name => blocks.find(b => b.name === name), getItemDef: () => undefined };
 const atlas: TextureAtlas = { image, layout: { width: image.width, height: image.height, tileSize: 16, regions } };
 const world = createWorld({ seed: 42, blocks, atlas: atlas.layout });

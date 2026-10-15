@@ -115,7 +115,7 @@ export interface Game extends GameApi {
 
 const MOUSE_FACTOR = 0.0025;
 const PITCH_LIMIT = Math.PI / 2 - 0.001;
-const DEFAULT_SETTINGS: Settings = { renderDistance: DEFAULT_RENDER_DISTANCE, fov: 70, mouseSensitivity: 1 };
+const DEFAULT_SETTINGS: Settings = { renderDistance: DEFAULT_RENDER_DISTANCE, fov: 70, mouseSensitivity: 1, volume: 0.8 };
 /** Pause in Ticks zwischen zwei Abbauvorgängen bzw. zwei gesetzten Blöcken bei gehaltener Taste. */
 const ACTION_COOLDOWN_TICKS = 5;
 /** So lange (in Ticks) wartet das Laden höchstens auf die Chunks um den Spawn-Punkt (20 s). */
@@ -245,6 +245,8 @@ class GameImpl implements Game {
       world: this.worldInfo,
       mode: this.mode,
       inventory: this.inventory,
+      // Truhen und Öfen folgen in Runde 2 (Aufgaben C11/C12).
+      container: null,
       health: this.vitals.health,
       maxHealth: MAX_HEALTH,
       air: this.vitals.air,
@@ -546,6 +548,7 @@ class GameImpl implements Game {
       ),
       fov: clamp(changes.fov ?? this.settings.fov, 30, 110),
       mouseSensitivity: clamp(changes.mouseSensitivity ?? this.settings.mouseSensitivity, 0.1, 3),
+      volume: clamp(changes.volume ?? this.settings.volume, 0, 1),
     };
     this.deps.renderer.setRenderDistance(this.settings.renderDistance);
     this.dirty = true;
@@ -594,11 +597,13 @@ class GameImpl implements Game {
       this.craftFromResult(shift ? 'all' : 'cursor');
       return;
     }
+    if (slot.area === 'container') return; // Truhen/Öfen: Runde 2
     this.applyContainer(clickContainer(this.container(), slot, button, shift, this.registry));
   }
 
   moveSlot(from: SlotRef, to: SlotRef): void {
     if (!this.containerOpen() || from.area === 'result' || to.area === 'result') return;
+    if (from.area === 'container' || to.area === 'container') return; // Truhen/Öfen: Runde 2
     this.applyContainer(moveContainerSlot(this.container(), from, to, this.registry));
   }
 
@@ -802,6 +807,7 @@ class GameImpl implements Game {
     const pos = hit.block;
     const block = this.registry.getBlockDef(hit.blockId);
     if (!world.setBlock(pos.x, pos.y, pos.z, BLOCK.AIR)) return;
+    this.deps.renderer.spawnBlockParticles({ ...pos }, hit.blockId);
     this.events.emit('blockBroken', { position: { ...pos }, block: hit.blockId });
     if (this.mode !== 'survival') return;
     const held = this.heldStack();

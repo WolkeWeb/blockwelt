@@ -66,6 +66,10 @@ export const createUi: CreateUi = ({ root, game, atlas }) => {
         return createContainerPanel('workbench', panelContext, cursor);
       case 'dead':
         return createDeadPanel(menuContext);
+      case 'furnace':
+      case 'chest':
+        // Ofen- und Truhen-Bildschirm folgen in Runde 2 (Aufgaben O14/O15).
+        return null;
       case 'playing':
         return null;
     }

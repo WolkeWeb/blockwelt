@@ -31,6 +31,21 @@ export const BLOCK = {
   IRON_ORE: 14,
   CRAFTING_TABLE: 15,
   TORCH: 16,
+  // Ab Runde 2 (Verträge in Phase 2 der ersten Runde ergänzt):
+  /** Ofen: öffnet per Rechtsklick den Ofen-Bildschirm (Schmelzen). */
+  FURNACE: 17,
+  /** Truhe: öffnet per Rechtsklick den Truhen-Bildschirm (27 Slots). */
+  CHEST: 18,
+  /** Schnee (Biome: Berggipfel, kalte Gebiete). */
+  SNOW: 19,
+  /** Sandstein (Biome: unter Sand in Wüsten und Stränden). */
+  SANDSTONE: 20,
+  /**
+   * Fließendes Wasser. `BLOCK.WATER` ist immer eine Quelle; fließendes Wasser entsteht und vergeht durch die Welt selbst.
+   * Die Fließstufe (Abstand zur Quelle) verwaltet die Welt intern. Physik und Raycast behandeln es wie Wasser
+   * (`shape: 'liquid'`).
+   */
+  FLOWING_WATER: 21,
 } as const satisfies Record<string, BlockId>;
 
 /** Schlüssel von {@link BLOCK}, z. B. `"GRASS"`. */
@@ -58,4 +73,9 @@ export const BLOCK_NAMES: Readonly<Record<number, string>> = {
   [BLOCK.IRON_ORE]: 'iron_ore',
   [BLOCK.CRAFTING_TABLE]: 'crafting_table',
   [BLOCK.TORCH]: 'torch',
+  [BLOCK.FURNACE]: 'furnace',
+  [BLOCK.CHEST]: 'chest',
+  [BLOCK.SNOW]: 'snow',
+  [BLOCK.SANDSTONE]: 'sandstone',
+  [BLOCK.FLOWING_WATER]: 'flowing_water',
 };

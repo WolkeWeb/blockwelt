@@ -10,7 +10,7 @@
  */
 
 import type { Registry, TextureAtlas } from './registry';
-import type { Vec3 } from './types';
+import type { BlockId, Vec3 } from './types';
 import type { World } from './world';
 
 /**
@@ -100,6 +100,13 @@ export interface Renderer {
 
   /** Abbau-Fortschritt am ausgewählten Block, 0 = keine Risse, 1 = gleich kaputt (10 Stufen). */
   setBreakProgress(progress: number): void;
+
+  /**
+   * Partikel beim Abbauen: kleine Bruchstücke in der Farbe/Textur des Blocks, die aus dem Block `position`
+   * (ganzzahlig) herausfallen und nach ca. 1 s verschwinden. Wird von der Spiellogik bei jedem abgebauten Block
+   * aufgerufen. Ein Renderer ohne Partikel darf nichts tun.
+   */
+  spawnBlockParticles(position: Vec3, block: BlockId): void;
 
   /** Messwerte des letzten Frames. */
   getStats(): RenderStats;

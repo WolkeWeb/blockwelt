@@ -8,6 +8,7 @@ import {
   CHUNK_SIZE,
   DEFAULT_RENDER_DISTANCE,
   chunkKey,
+  type BlockId,
   type CameraState,
   type ChunkMesh,
   type CreateRenderer,
@@ -217,6 +218,10 @@ class BasicRenderer implements Renderer {
 
   setBreakProgress(progress: number): void {
     this.selection.setProgress(progress);
+  }
+
+  spawnBlockParticles(_position: Vec3, _block: BlockId): void {
+    // Partikel folgen in Runde 2 (Aufgabe X16). Bis dahin erlaubt der Vertrag, nichts zu tun.
   }
 
   getStats(): RenderStats {

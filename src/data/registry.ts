@@ -1,7 +1,7 @@
 /**
  * Baut aus Block-, Item- und Rezeptlisten eine Registry nach dem Vertrag in `core/registry.ts`.
  */
-import type { BlockDef, BlockId, ItemDef, ItemId, Recipe, Registry } from '../core';
+import type { BlockDef, BlockId, ItemDef, ItemId, Recipe, Registry, SmeltingRecipe } from '../core';
 
 /** Platzhalter für unbekannte Block-IDs (und Lücken in der ID-Folge). */
 function unknownBlock(id: BlockId): BlockDef {
@@ -32,6 +32,7 @@ export function buildRegistry(
   blockList: readonly BlockDef[],
   itemList: readonly ItemDef[],
   recipes: readonly Recipe[],
+  smelting: readonly SmeltingRecipe[] = [],
 ): Registry {
   const maxId = blockList.reduce((max, block) => Math.max(max, block.id), 0);
   const blocks: BlockDef[] = [];
@@ -64,6 +65,7 @@ export function buildRegistry(
     blocks,
     items: [...items.values()],
     recipes,
+    smelting,
     textureNames: [...textureNames],
     getBlockDef: (id) => blocks[id] ?? fallback,
     getBlockDefByName: (name) => byName.get(name),

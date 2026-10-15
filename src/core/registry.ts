@@ -148,6 +148,11 @@ export interface ItemDef {
   readonly block: BlockId | null;
   /** Werkzeug-Eigenschaften oder `null`. */
   readonly tool: ToolDef | null;
+  /**
+   * Brenndauer als Ofen-Brennstoff in Sekunden (z. B. Kohle 80, Holzstamm/Bretter 15, Stock 5).
+   * Fehlt das Feld (oder ist es 0), taugt das Item nicht als Brennstoff.
+   */
+  readonly fuelSeconds?: number;
 }
 
 // ---------------------------------------------------------------------------
@@ -199,6 +204,20 @@ export interface ShapelessRecipe {
 /** Ein Crafting-Rezept. */
 export type Recipe = ShapedRecipe | ShapelessRecipe;
 
+/**
+ * Ofen-Rezept: ein Stück `input` wird in `seconds` Sekunden zu `result`.
+ * Beispiel: `{ id: 'iron_ingot', input: 'iron_ore', result: { item: 'iron_ingot', count: 1 }, seconds: 10 }`
+ */
+export interface SmeltingRecipe {
+  /** Eindeutige ID des Rezepts. */
+  readonly id: string;
+  /** Zutat (genau ein Stück pro Vorgang). */
+  readonly input: ItemId;
+  readonly result: RecipeResult;
+  /** Dauer eines Vorgangs in Sekunden (Standard 10). */
+  readonly seconds: number;
+}
+
 // ---------------------------------------------------------------------------
 // Registry
 // ---------------------------------------------------------------------------
@@ -218,6 +237,8 @@ export interface Registry {
   readonly items: readonly ItemDef[];
   /** Alle Crafting-Rezepte. */
   readonly recipes: readonly Recipe[];
+  /** Alle Ofen-Rezepte (leer, solange es keine gibt). */
+  readonly smelting: readonly SmeltingRecipe[];
   /** Alle Textur-Namen, die Blöcke und Items verwenden (ohne Duplikate). Grundlage für den Atlas. */
   readonly textureNames: readonly string[];
 
