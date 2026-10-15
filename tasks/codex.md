@@ -22,10 +22,11 @@ Die Verträge in `src/core/` sind fest. Performance ist wichtig – miss sie, st
 - [x] X9 Licht: Sonnenlicht von oben (fällt durch Luft, Glas, Blätter abgeschwächt) und Blocklicht von leuchtenden
       Blöcken, Ausbreitung per Flood-Fill (Stufen 0–15), über Chunk-Grenzen. Reagiert auf setBlock.
       Licht wird ins Mesh gebacken; die Tageszeit verändert nur die Stärke des Sonnenlichts im Shader.
-- [ ] X10 Himmel: Farbverlauf je Tageszeit, Sonne und Mond, Sterne nachts, Nebel am Rand der Sichtweite, einfache Wolken.
+- [x] X10 Himmel: Farbverlauf je Tageszeit, Sonne und Mond, Sterne nachts, Nebel am Rand der Sichtweite, einfache Wolken.
 - [ ] X11 Auswahlrahmen um den anvisierten Block und Abbau-Risse (10 Stufen) als Overlay.
 - [ ] X12 Performance: Frustum-Culling, Speicher entladener Chunks freigeben, FPS bei Sichtweite 8 messen
       (Playwright oder Dev-Overlay). Engpässe beheben. Messwerte in `notes/codex.md` eintragen.
+
 
 
 

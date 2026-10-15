@@ -5,6 +5,7 @@
  */
 import * as THREE from 'three';
 import { sortTransparentFaces } from './transparency';
+import { Sky } from './sky';
 import {
   CHUNK_SIZE,
   DEFAULT_RENDER_DISTANCE,
@@ -45,6 +46,7 @@ class BasicRenderer implements Renderer {
   private renderer: THREE.WebGLRenderer | null = null;
   private canvas: HTMLCanvasElement | null = null;
   private readonly scene = new THREE.Scene();
+  private readonly sky = new Sky();
   private readonly camera = new THREE.PerspectiveCamera(70, 1, 0.1, 1000);
   private readonly chunks = new Map<string, THREE.Group>();
   private readonly materials = {
@@ -94,6 +96,7 @@ class BasicRenderer implements Renderer {
     this.camera.rotation.order = 'YXZ';
     this.scene.background = DAY_SKY.clone();
     this.scene.fog = this.fog;
+    this.scene.add(this.sky.group);
     const edges = new THREE.EdgesGeometry(new THREE.BoxGeometry(1.004, 1.004, 1.004));
     this.selection = new THREE.LineSegments(edges, new THREE.LineBasicMaterial({ color: 0x000000 }));
     this.selection.visible = false;
@@ -165,7 +168,7 @@ class BasicRenderer implements Renderer {
     this.resize();
 
     const light = time.day.skyLight;
-    const sky = NIGHT_SKY.clone().lerp(DAY_SKY, light);
+    const sky = this.sky.update(camera.position, time.day, time.elapsed, this.camera.far, camera.underwater);
     const background = camera.underwater ? WATER_FOG : sky;
     (this.scene.background as THREE.Color).copy(background);
     this.fog.color.copy(background);
@@ -179,7 +182,7 @@ class BasicRenderer implements Renderer {
       this.camera.updateProjectionMatrix();
     }
     this.camera.position.set(camera.position.x, camera.position.y, camera.position.z);
-    this.camera.rotation.set(camera.pitch, camera.yaw, 0);
+    this.camera.rotation.set(-camera.pitch, camera.yaw, 0);
     if (this.sortDirty || this.lastSortPosition.distanceToSquared(this.camera.position) > 0.25) {
       for (const group of this.chunks.values()) for (const child of group.children) {
         if (child.userData.translucent) {
@@ -221,6 +224,7 @@ class BasicRenderer implements Renderer {
     this.setWorld(null);
     for (const material of Object.values(this.materials)) material.dispose();
     this.atlasTexture?.dispose();
+    this.sky.dispose();
     this.selection.geometry.dispose();
     (this.selection.material as THREE.Material).dispose();
     this.renderer?.dispose();
