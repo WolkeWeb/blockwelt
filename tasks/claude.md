@@ -45,20 +45,20 @@ ohne Rückfrage bauen können. Jeder Bereich bekommt eine einfache, funktioniere
 Ordner: `src/game/`, `src/save/`, `src/main.ts`.
 Nutze die anderen Bereiche ausschließlich über die Verträge in `src/core/`.
 
-- [ ] C1 Spieler-Steuerung: WASD, Maus, Springen, Sprinten (Strg/Doppel-W), Schleichen (Shift, nicht von Kanten fallen).
+- [x] C1 Spieler-Steuerung: WASD, Maus, Springen, Sprinten (Strg/Doppel-W), Schleichen (Shift, nicht von Kanten fallen).
       Nutzt `stepPlayer` aus dem Physik-Vertrag.
-- [ ] C2 Blöcke abbauen: Abbauzeit abhängig von Härte und Werkzeug, Fortschritt an Renderer und Oberfläche melden,
+- [x] C2 Blöcke abbauen: Abbauzeit abhängig von Härte und Werkzeug, Fortschritt an Renderer und Oberfläche melden,
       Drop landet im Inventar. Blöcke setzen: nicht in die eigene Hitbox, nur an die getroffene Fläche.
-- [ ] C3 Inventar-Modell: 27 Slots + 9 Hotbar, Stapel bis 64 (Werkzeuge 1), Hotbar-Auswahl per Mausrad und 1–9,
+- [x] C3 Inventar-Modell: 27 Slots + 9 Hotbar, Stapel bis 64 (Werkzeuge 1), Hotbar-Auswahl per Mausrad und 1–9,
       Slots tauschen/teilen/zusammenlegen, Rechtsklick-Verhalten wie gewohnt. Unit-Tests.
-- [ ] C4 Crafting-Logik: 2×2 und 3×3, geformte und formlose Rezepte, Rezepte verschiebbar im Raster,
+- [x] C4 Crafting-Logik: 2×2 und 3×3, geformte und formlose Rezepte, Rezepte verschiebbar im Raster,
       gespiegelte Rezepte erlaubt, liest Rezepte aus der Registry. Unit-Tests.
-- [ ] C5 Werkzeuge: Haltbarkeit, Abbau-Bonus je Material, manche Blöcke droppen nur mit passendem Werkzeug.
-- [ ] C6 Tag/Nacht-Zyklus: Tageszeit als Zustand, Sonnenwinkel und Himmelslicht für den Renderer bereitstellen.
-- [ ] C7 Spielmodi: Kreativ (fliegen per Doppel-Leertaste, unendliche Blöcke, sofortiges Abbauen)
+- [x] C5 Werkzeuge: Haltbarkeit, Abbau-Bonus je Material, manche Blöcke droppen nur mit passendem Werkzeug.
+- [x] C6 Tag/Nacht-Zyklus: Tageszeit als Zustand, Sonnenwinkel und Himmelslicht für den Renderer bereitstellen.
+- [x] C7 Spielmodi: Kreativ (fliegen per Doppel-Leertaste, unendliche Blöcke, sofortiges Abbauen)
       und Überleben (Leben, Fallschaden ab 4 Blöcken, Ertrinken, Respawn).
-- [ ] C8 Speichern/Laden in IndexedDB: Weltliste, nur veränderte Blöcke/Chunks speichern, Spielerzustand, Autosave alle 30 s.
-- [ ] C9 GameApi vollständig implementieren, sodass die Oberfläche (OpenCode) nur darüber arbeitet.
+- [x] C8 Speichern/Laden in IndexedDB: Weltliste, nur veränderte Blöcke/Chunks speichern, Spielerzustand, Autosave alle 30 s.
+- [x] C9 GameApi vollständig implementieren, sodass die Oberfläche (OpenCode) nur darüber arbeitet.
       Spawn-Punkt: sicherer Platz an der Oberfläche über dem Wasser.
 
 ---
