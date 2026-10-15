@@ -18,7 +18,7 @@ Die Verträge in `src/core/` sind fest. Performance ist wichtig – miss sie, st
 - [x] X7 Physik: AABB-Kollision Achse für Achse, Schwerkraft, Sprung auf ca. 1,25 Blöcke Höhe,
       Bodenreibung, Schwimmen und langsameres Sinken im Wasser, Schleichen verhindert Fallen von Kanten.
       Unit-Tests für typische Fälle (Wand, Decke, Kante, Treppe aus Blöcken).
-- [ ] X8 Raycast mit DDA-Verfahren: exakter getroffener Block und getroffene Fläche. Unit-Tests.
+- [x] X8 Raycast mit DDA-Verfahren: exakter getroffener Block und getroffene Fläche. Unit-Tests.
 - [ ] X9 Licht: Sonnenlicht von oben (fällt durch Luft, Glas, Blätter abgeschwächt) und Blocklicht von leuchtenden
       Blöcken, Ausbreitung per Flood-Fill (Stufen 0–15), über Chunk-Grenzen. Reagiert auf setBlock.
       Licht wird ins Mesh gebacken; die Tageszeit verändert nur die Stärke des Sonnenlichts im Shader.
@@ -26,6 +26,7 @@ Die Verträge in `src/core/` sind fest. Performance ist wichtig – miss sie, st
 - [ ] X11 Auswahlrahmen um den anvisierten Block und Abbau-Risse (10 Stufen) als Overlay.
 - [ ] X12 Performance: Frustum-Culling, Speicher entladener Chunks freigeben, FPS bei Sichtweite 8 messen
       (Playwright oder Dev-Overlay). Engpässe beheben. Messwerte in `notes/codex.md` eintragen.
+
 
 
 

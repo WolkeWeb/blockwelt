@@ -1,64 +1,33 @@
-/**
- * PLATZHALTER aus Phase 0: einfacher Raycast in kleinen festen Schritten.
- * Wird in Phase 1 (X8) durch ein exaktes DDA-Verfahren ersetzt.
- */
-import { FACE_NORMALS, FACES, type Face, type Raycast } from '../core';
+﻿import { FACE_NORMALS, type Face, type Raycast } from '../core';
 
-const STEP = 0.02;
-
+/** Amanatides-Woo traversal. Ties cross all touched planes, skipping zero-volume cells. */
 export const raycast: Raycast = (world, blocks, origin, direction, maxDistance) => {
-  const len = Math.hypot(direction.x, direction.y, direction.z);
-  if (len === 0) return null;
-  const dx = direction.x / len;
-  const dy = direction.y / len;
-  const dz = direction.z / len;
-  let prevX = Math.floor(origin.x);
-  let prevY = Math.floor(origin.y);
-  let prevZ = Math.floor(origin.z);
-
-  for (let t = 0; t <= maxDistance; t += STEP) {
-    const px = origin.x + dx * t;
-    const py = origin.y + dy * t;
-    const pz = origin.z + dz * t;
-    const bx = Math.floor(px);
-    const by = Math.floor(py);
-    const bz = Math.floor(pz);
-    if (bx === prevX && by === prevY && bz === prevZ && t > 0) continue;
-    if (!world.isLoaded(bx, bz)) return null;
-    const blockId = world.getBlock(bx, by, bz);
-    const def = blocks.getBlockDef(blockId);
+  const length = Math.hypot(direction.x, direction.y, direction.z);
+  if (!Number.isFinite(length) || length === 0 || !Number.isFinite(maxDistance) || maxDistance < 0 ||
+      ![origin.x, origin.y, origin.z].every(Number.isFinite)) return null;
+  const d = [direction.x / length, direction.y / length, direction.z / length];
+  const o = [origin.x, origin.y, origin.z];
+  const cell = o.map(Math.floor), step = d.map(Math.sign);
+  const delta = d.map(v => v === 0 ? Infinity : Math.abs(1 / v));
+  const next = d.map((v, i) => v === 0 ? Infinity : ((cell[i] + (v > 0 ? 1 : 0)) - o[i]) / v);
+  const faces: Face[] = [d[0] > 0 ? 'west' : 'east', d[1] > 0 ? 'bottom' : 'top', d[2] > 0 ? 'north' : 'south'];
+  const dominant = d.reduce((best, value, i) => Math.abs(value) > Math.abs(d[best]) ? i : best, 0);
+  let face = faces[dominant], distance = 0;
+  while (distance <= maxDistance) {
+    const [x, y, z] = cell;
+    if (!world.isLoaded(x, z)) return null;
+    const blockId = world.getBlock(x, y, z), def = blocks.getBlockDef(blockId);
     if (def.shape !== 'none' && def.shape !== 'liquid') {
-      // Getroffene Seite: aus welcher Nachbarzelle kam der Strahl?
-      const ox = prevX - bx;
-      const oy = prevY - by;
-      const oz = prevZ - bz;
-      let face: Face = dy > 0 ? 'bottom' : 'top';
-      for (const f of FACES) {
-        const n = FACE_NORMALS[f];
-        if (n.x === Math.sign(ox) && n.y === Math.sign(oy) && n.z === Math.sign(oz)) face = f;
-      }
-      if (Math.abs(ox) + Math.abs(oy) + Math.abs(oz) > 1) {
-        // Diagonaler Sprung (selten bei kleinen Schritten): Achse mit dem größten Richtungsanteil nehmen
-        const ax = Math.abs(dx);
-        const ay = Math.abs(dy);
-        const az = Math.abs(dz);
-        if (ax >= ay && ax >= az) face = dx > 0 ? 'west' : 'east';
-        else if (ay >= az) face = dy > 0 ? 'bottom' : 'top';
-        else face = dz > 0 ? 'north' : 'south';
-      }
       const n = FACE_NORMALS[face];
-      return {
-        block: { x: bx, y: by, z: bz },
-        blockId,
-        face,
-        place: { x: bx + n.x, y: by + n.y, z: bz + n.z },
-        point: { x: px, y: py, z: pz },
-        distance: t,
-      };
+      return { block: { x, y, z }, blockId, face, place: { x: x + n.x, y: y + n.y, z: z + n.z },
+        point: { x: origin.x + d[0] * distance, y: origin.y + d[1] * distance, z: origin.z + d[2] * distance }, distance };
     }
-    prevX = bx;
-    prevY = by;
-    prevZ = bz;
+    distance = Math.min(...next);
+    if (distance > maxDistance) break;
+    const tied = next.map((v, i) => Math.abs(v - distance) < 1e-10 ? i : -1).filter(i => i >= 0);
+    const axis = tied.reduce((best, i) => Math.abs(d[i]) > Math.abs(d[best]) ? i : best, tied[0]);
+    face = faces[axis];
+    for (const i of tied) { cell[i] += step[i]; next[i] += delta[i]; }
   }
   return null;
 };
