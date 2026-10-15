@@ -52,6 +52,15 @@
   - `ui/`: nur Fadenkreuz.
   - `game/`: Stub mit Freiflug, Maus-Blick, Tasten E/F3/1–9/Mausrad, Tageszeit, Auswahlrahmen. Kein Abbauen, kein Speichern.
   - Tests anderer Bereiche bauen sich ihre Testdaten selbst (z. B. eigene `BlockDef`s), statt `src/data` zu importieren.
+- **C0-5 main.ts:** Logik mit festem Akkumulator (20 TPS, max. 5 Ticks Nachholen pro Frame), Render per rAF mit
+  Interpolationsanteil `alpha`. Maus-Blick wird pro Frame angewendet (flüssiger als pro Tick). Klick aufs Canvas →
+  `game.onCanvasClick()` (Pointer-Lock), Lock verloren → Pause. In Phase 0 startet direkt eine Platzhalter-Welt
+  (Seed 1, Kreativ), weil es noch kein Menü gibt. `window.__blockwelt.game` ist für Tests/Konsole zugänglich.
+  FPS misst `main.ts` und gibt sie per `game.setFps` an die Debug-Werte weiter.
+- **C0-5 Farben:** three.js-Farbmanagement im Platzhalter-Renderer aus (`ColorManagement.enabled = false`,
+  `LinearSRGBColorSpace`), damit `BlockDef.color` so aussieht wie angegeben. Codex darf das beim echten Renderer anders lösen.
+- **C0-5 Kleinkram:** leeres Favicon (`data:,`) in `index.html`, sonst meldet der Browser einen 404-Fehler in der Konsole;
+  `chunkSizeWarningLimit` 1500 kB wegen three.js.
 
 ## Wünsche an die Verträge
 

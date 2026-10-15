@@ -32,7 +32,7 @@ ohne Rückfrage bauen können. Jeder Bereich bekommt eine einfache, funktioniere
       `world/` flache Welt mit einfachem Meshing (eine Farbe pro Block), `physics/` freies Fliegen ohne Kollision
       plus einfacher Raycast, `render/` Grundszene, `ui/` nur ein Fadenkreuz,
       `data/` fünf Blöcke (Gras, Erde, Stein, Holzstamm, Blätter) ohne Texturen, `game/` minimaler GameApi-Stub.
-- [ ] C0-5 `main.ts` verdrahtet alles: Szene, Kamera, Pointer-Lock, Logik-Tick (20 TPS), Render-Loop.
+- [x] C0-5 `main.ts` verdrahtet alles: Szene, Kamera, Pointer-Lock, Logik-Tick (20 TPS), Render-Loop.
 - [ ] C0-6 Playwright-Smoketest: Seite lädt, Canvas rendert, keine Console-Errors, Screenshot nach `test-results/`.
 - [ ] C0-7 GitHub-Actions-Workflow: Push auf `main` → `npm run check` → Deploy auf GitHub Pages
       (`base` in vite.config passend zum Repo-Namen `blockwelt`).

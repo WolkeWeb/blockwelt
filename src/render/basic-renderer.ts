@@ -20,6 +20,8 @@ import {
   type World,
 } from '../core';
 
+THREE.ColorManagement.enabled = false;
+
 const DAY_SKY = new THREE.Color(0x87b8eb);
 const NIGHT_SKY = new THREE.Color(0x0b1026);
 const WATER_FOG = new THREE.Color(0x1d3f7a);
@@ -75,6 +77,8 @@ class BasicRenderer implements Renderer {
     this.canvas = canvas;
     this.renderer = new THREE.WebGLRenderer({ canvas, antialias: false, powerPreference: 'high-performance' });
     this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    // Farben aus BlockDef.color sind sRGB-Werte und sollen genau so erscheinen
+    this.renderer.outputColorSpace = THREE.LinearSRGBColorSpace;
   }
 
   setWorld(world: World | null): void {

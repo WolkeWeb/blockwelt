@@ -6,6 +6,8 @@ export default defineConfig({
     outDir: 'dist',
     emptyOutDir: true,
     sourcemap: true,
+    // three.js allein ist gut 700 kB groß – das ist für ein Spiel in Ordnung
+    chunkSizeWarningLimit: 1500,
   },
   worker: {
     format: 'es',
