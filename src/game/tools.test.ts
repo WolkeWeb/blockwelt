@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { BlockDef, ToolDef } from '../core';
-import { breakSeconds, breakTicks, canHarvest, rollDrop } from './tools';
+import { breakSeconds, breakTicks, canHarvest, damageTool, rollDrop, toolWear } from './tools';
 
 const block = (over: Partial<BlockDef>): BlockDef =>
   ({ hardness: 1, preferredTool: null, requiredToolLevel: 0, drop: null, ...over }) as BlockDef;
@@ -53,5 +53,25 @@ describe('Drops', () => {
     expect(rollDrop(b, () => 0.1)).toEqual({ item: 'stick', count: 2 });
     expect(rollDrop(b, () => 0.9)).toBeNull();
     expect(rollDrop(block({}))).toBeNull();
+  });
+});
+
+describe('Haltbarkeit', () => {
+  const pick = tool('pickaxe', 1, 2);
+  it('neues Werkzeug beginnt mit voller Haltbarkeit', () => {
+    expect(damageTool({ item: 'wooden_pickaxe', count: 1 }, pick, 1)).toEqual({
+      item: 'wooden_pickaxe',
+      count: 1,
+      durability: 58,
+    });
+  });
+  it('geht bei 0 kaputt', () => {
+    expect(damageTool({ item: 'wooden_pickaxe', count: 1, durability: 1 }, pick, 1)).toBeNull();
+    expect(damageTool({ item: 'wooden_pickaxe', count: 1, durability: 2 }, pick, 1)?.durability).toBe(1);
+  });
+  it('Schwerter verlieren doppelt, weiche Blöcke nichts', () => {
+    expect(toolWear(dirt, tool('sword', 1, 1))).toBe(2);
+    expect(toolWear(dirt, pick)).toBe(1);
+    expect(toolWear(block({ hardness: 0 }), pick)).toBe(0);
   });
 });

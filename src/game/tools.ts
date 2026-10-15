@@ -55,3 +55,21 @@ export function rollDrop(block: BlockDef, random: () => number = Math.random): I
   if (drop.chance !== undefined && random() >= drop.chance) return null;
   return { item: drop.item, count: drop.count };
 }
+
+/** Haltbarkeit, die ein Werkzeug beim Abbauen eines Blocks verliert (Schwerter 2, sonst 1; Blöcke mit Härte 0 kosten nichts). */
+export function toolWear(block: BlockDef, tool: ToolDef): number {
+  if (block.hardness <= 0) return 0;
+  return tool.type === 'sword' ? 2 : 1;
+}
+
+/**
+ * Nutzt ein Werkzeug ab.
+ * @param stack Das Werkzeug (fehlt `durability`, ist es neu).
+ * @param tool Seine Werkzeug-Eigenschaften.
+ * @param wear Verlorene Haltbarkeit.
+ * @returns Das abgenutzte Werkzeug, oder `null`, wenn es kaputtgegangen ist.
+ */
+export function damageTool(stack: ItemStack, tool: ToolDef, wear: number): ItemStack | null {
+  const remaining = (stack.durability ?? tool.maxDurability) - wear;
+  return remaining > 0 ? { ...stack, durability: remaining } : null;
+}

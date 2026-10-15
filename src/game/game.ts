@@ -41,6 +41,7 @@ import {
   type Settings,
   type SlotRef,
   type StepPlayer,
+  type ToolDef,
   type Unsubscribe,
   type Vec3,
   type World,
@@ -58,7 +59,7 @@ import { consumeIngredients, craftResult } from './crafting';
 import { INVENTORY_SIZE, addItem, canMerge, maxStackOf, removeFromSlot } from './inventory';
 import { SprintTracker, buildMovementInput, type MovementKeys } from './movement';
 import { dayTimeFromTicks } from './time';
-import { breakSeconds, breakTicks, rollDrop } from './tools';
+import { breakSeconds, breakTicks, canHarvest, damageTool, rollDrop, toolWear } from './tools';
 
 /** Abhängigkeiten der Spiellogik – alles kommt über die Verträge aus `src/core/`. */
 export interface GameDeps {
@@ -543,10 +544,25 @@ class StubGame implements Game {
     const block = this.registry.getBlockDef(hit.blockId);
     if (!world.setBlock(pos.x, pos.y, pos.z, BLOCK.AIR)) return;
     this.events.emit('blockBroken', { position: { ...pos }, block: hit.blockId });
-    if (this.mode === 'survival') {
+    if (this.mode !== 'survival') return;
+    const held = this.heldStack();
+    const tool = this.heldItemDef()?.tool ?? null;
+    if (canHarvest(block, tool)) {
       const drop = rollDrop(block);
       if (drop) this.giveItem(drop);
     }
+    if (held && tool) this.wearTool(held, tool, toolWear(block, tool));
+  }
+
+  /** Nutzt das gehaltene Werkzeug ab; ein kaputtes verschwindet. */
+  private wearTool(held: ItemStack, tool: ToolDef, wear: number): void {
+    if (wear <= 0) return;
+    const worn = damageTool(held, tool, wear);
+    const slots = this.inventory.slots.slice();
+    slots[this.inventory.selected] = worn;
+    this.inventory = { ...this.inventory, slots };
+    if (worn === null) this.events.emit('toolBroken', { item: held.item });
+    this.dirty = true;
   }
 
   /** Legt Items ins Inventar (was nicht passt, geht verloren – es gibt noch keine Item-Entities). */

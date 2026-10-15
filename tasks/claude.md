@@ -53,7 +53,7 @@ Nutze die anderen Bereiche ausschließlich über die Verträge in `src/core/`.
       Slots tauschen/teilen/zusammenlegen, Rechtsklick-Verhalten wie gewohnt. Unit-Tests.
 - [x] C4 Crafting-Logik: 2×2 und 3×3, geformte und formlose Rezepte, Rezepte verschiebbar im Raster,
       gespiegelte Rezepte erlaubt, liest Rezepte aus der Registry. Unit-Tests.
-- [ ] C5 Werkzeuge: Haltbarkeit, Abbau-Bonus je Material, manche Blöcke droppen nur mit passendem Werkzeug.
+- [x] C5 Werkzeuge: Haltbarkeit, Abbau-Bonus je Material, manche Blöcke droppen nur mit passendem Werkzeug.
 - [ ] C6 Tag/Nacht-Zyklus: Tageszeit als Zustand, Sonnenwinkel und Himmelslicht für den Renderer bereitstellen.
 - [ ] C7 Spielmodi: Kreativ (fliegen per Doppel-Leertaste, unendliche Blöcke, sofortiges Abbauen)
       und Überleben (Leben, Fallschaden ab 4 Blöcken, Ertrinken, Respawn).
