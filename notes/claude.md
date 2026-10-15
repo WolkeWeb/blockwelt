@@ -65,6 +65,10 @@
   speichert `test-results/smoke.png` und prüft die Pixel (oben Himmel ≠ unten Boden). Dafür gibt es einen kleinen
   PNG-Decoder in `e2e/png.ts` (Node-`zlib`, kein neues Paket). Jeder `console.error` und jede unbehandelte Ausnahme
   lässt den Test fehlschlagen.
+- **C0-7 Deploy:** ein Workflow `.github/workflows/deploy.yml`: Job `check` (`npm ci`, `npm run check`, bei Push auf `main`
+  zusätzlich `dist/` als Pages-Artefakt hochladen) → Job `deploy` (nur Push auf `main`). Pull Requests werden nur geprüft.
+  E2E läuft (noch) nicht in CI, wie in der Aufgabe festgelegt. `base: '/blockwelt/'` gilt auch für Dev-Server und Preview,
+  damit lokal und online dieselben Pfade gelten → lokal `http://localhost:5173/blockwelt/`.
 
 ## Wünsche an die Verträge
 

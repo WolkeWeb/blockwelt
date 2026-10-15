@@ -1,6 +1,13 @@
 import { defineConfig } from 'vitest/config';
 
+/**
+ * Das Spiel läuft auf GitHub Pages unter https://<user>.github.io/blockwelt/ – deshalb liegt alles unter /blockwelt/.
+ * Auch der Dev-Server und `vite preview` nutzen diesen Pfad (http://localhost:5173/blockwelt/).
+ */
+export const BASE_PATH = '/blockwelt/';
+
 export default defineConfig({
+  base: BASE_PATH,
   build: {
     target: 'es2022',
     outDir: 'dist',

@@ -12,7 +12,8 @@ export default defineConfig({
   timeout: 60_000,
   reporter: [['list']],
   use: {
-    baseURL: 'http://localhost:4173/',
+    // Gleicher Pfad wie auf GitHub Pages (siehe `base` in vite.config.ts)
+    baseURL: 'http://localhost:4173/blockwelt/',
     viewport: { width: 1280, height: 720 },
     trace: 'retain-on-failure',
   },
@@ -31,7 +32,7 @@ export default defineConfig({
   ],
   webServer: {
     command: 'npm run build && npm run preview',
-    url: 'http://localhost:4173/',
+    url: 'http://localhost:4173/blockwelt/',
     reuseExistingServer: !process.env.CI,
     timeout: 120_000,
   },
