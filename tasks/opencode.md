@@ -18,7 +18,7 @@ Oberfläche als HTML/CSS-Overlay über dem Canvas (kein Framework). Pixeliger Lo
 - [x] O5 Hotbar unten mittig: 9 Slots, Auswahlrahmen, Item-Symbol (aus der Textur), Anzahl, Haltbarkeitsbalken.
 - [x] O6 Inventar-Bildschirm (Taste E): 27 + 9 Slots, 2×2-Crafting mit Ergebnis-Slot, Item am Mauszeiger,
       Klick/Rechtsklick/Shift-Klick über die GameApi. Tooltip mit Item-Namen.
-- [ ] O7 Werkbank-Bildschirm (Rechtsklick auf Werkbank): 3×3-Crafting, sonst wie O6.
+- [x] O7 Werkbank-Bildschirm (Rechtsklick auf Werkbank): 3×3-Crafting, sonst wie O6.
 - [ ] O8 HUD: Fadenkreuz, Herzen, Luftblasen (nur unter Wasser), Debug-Anzeige mit F3 (FPS, Position, Chunk, Blickrichtung).
 - [ ] O9 Menüs: Startbildschirm mit Spieltitel „Blockwelt“, Weltauswahl (neu mit Name, Seed und Modus / laden / löschen),
       Pausenmenü (Esc), Einstellungen (Sichtweite 2–16, Sichtfeld, Mausempfindlichkeit), Todesbildschirm mit Respawn.

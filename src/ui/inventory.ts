@@ -1,5 +1,8 @@
 /**
- * Inventar-Bildschirm (Taste E): 27 + 9 Slots, 2×2-Crafting mit Ergebnis, Stapel am Mauszeiger.
+ * Inventar- und Werkbank-Bildschirm.
+ *
+ * Beide teilen sich den Aufbau: Crafting-Raster + Ergebnis, Hauptinventar (3×9) und Hotbar (1×9).
+ * Das Inventar hat 2×2, die Werkbank 3×3 Rasterfelder.
  *
  * Klicks, Rechtsklicks, Shift-Klicks und Drag & Drop gehen ausschließlich über die {@link GameApi}.
  *
@@ -50,13 +53,13 @@ function inventoryStack(state: GameState, index: number): ItemStack | null {
   return state.inventory.slots[index] ?? null;
 }
 
-/** Erzeugt den Inventar-Bildschirm mit 2×2-Crafting. */
-export function createInventoryPanel(ctx: PanelContext, cursor: CursorLayer): Panel {
-  const size = 2;
+/** Erzeugt den Inventar- (2×2) oder Werkbank-Bildschirm (3×3). */
+export function createContainerPanel(kind: 'inventory' | 'workbench', ctx: PanelContext, cursor: CursorLayer): Panel {
+  const size = kind === 'inventory' ? 2 : 3;
   const drag: DragState = { from: null };
 
   const element = el('div', 'bw-panel bw-container');
-  const title = el('div', 'bw-panel-title', 'Inventar');
+  const title = el('div', 'bw-panel-title', kind === 'inventory' ? 'Inventar' : 'Werkbank');
 
   const craftingRefs: SlotRef[] = Array.from({ length: size * size }, (_, index) => ({ area: 'crafting', index }));
   const crafting = slotGroup(`bw-grid-${size}`, craftingRefs, ctx, drag);

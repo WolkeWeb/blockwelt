@@ -28,6 +28,8 @@
   hängt an einem `mousemove`-Listener auf `window`. Die UI registriert keine eigenen Tasten-Listener
   für E/Esc/F3. Bei offenem Bildschirm fängt das Overlay die Zeigerereignisse ab (`pointer-events: auto`),
   damit Klicks nicht beim Canvas landen.
+- **O7 – Werkbank:** Derselbe Aufbau wie das Inventar; nur das Crafting-Raster ist 3×3
+  (`createContainerPanel('workbench')`). Panel und Slots werden wiederverwendet.
 
 ## Wünsche an die Verträge
 

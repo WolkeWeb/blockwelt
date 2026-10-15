@@ -14,7 +14,7 @@ import './styles.css';
 import { el, setVisible } from './dom';
 import { createHud } from './hud';
 import { createIconPainter } from './icons';
-import { createInventoryPanel, type Panel, type PanelContext } from './inventory';
+import { createContainerPanel, type Panel, type PanelContext } from './inventory';
 import { createCursorLayer, createTooltip } from './slots';
 
 export const createUi: CreateUi = ({ root, game, atlas }) => {
@@ -39,7 +39,9 @@ export const createUi: CreateUi = ({ root, game, atlas }) => {
   function build(screen: Screen): Panel | null {
     switch (screen) {
       case 'inventory':
-        return createInventoryPanel(panelContext, cursor);
+        return createContainerPanel('inventory', panelContext, cursor);
+      case 'workbench':
+        return createContainerPanel('workbench', panelContext, cursor);
       default:
         return null;
     }
