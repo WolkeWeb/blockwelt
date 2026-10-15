@@ -1,9 +1,9 @@
-/**
- * PLATZHALTER aus Phase 0: Grundszene mit three.js.
- * Zeichnet die Chunk-Meshes der Welt mit Vertex-Farben, einen einfachen Himmel (Hintergrundfarbe + Nebel)
- * und einen Auswahlrahmen. Wird in Phase 1 (X5, X6, X9–X12) ausgebaut.
- */
+/** Atlas-rendered voxel scene, baked light, sorted water and precise chunk culling. */
 import * as THREE from 'three';
+import { sortTransparentFaces } from './transparency';
+import { Sky } from './sky';
+import { BlockSelection } from './selection';
+import { ChunkCuller } from './culling';
 import {
   CHUNK_SIZE,
   DEFAULT_RENDER_DISTANCE,
@@ -18,12 +18,12 @@ import {
   type Unsubscribe,
   type Vec3,
   type World,
+  type RendererOptions,
 } from '../core';
 
 THREE.ColorManagement.enabled = false;
 
 const DAY_SKY = new THREE.Color(0x87b8eb);
-const NIGHT_SKY = new THREE.Color(0x0b1026);
 const WATER_FOG = new THREE.Color(0x1d3f7a);
 
 function toGeometry(buffers: MeshBuffers): THREE.BufferGeometry | null {
@@ -35,6 +35,7 @@ function toGeometry(buffers: MeshBuffers): THREE.BufferGeometry | null {
   geometry.setAttribute('color', new THREE.BufferAttribute(buffers.colors, 3));
   geometry.setAttribute('light', new THREE.BufferAttribute(buffers.light, 2));
   geometry.setIndex(new THREE.BufferAttribute(buffers.indices, 1));
+  geometry.computeBoundingBox();
   geometry.computeBoundingSphere();
   return geometry;
 }
@@ -43,33 +44,57 @@ class BasicRenderer implements Renderer {
   private renderer: THREE.WebGLRenderer | null = null;
   private canvas: HTMLCanvasElement | null = null;
   private readonly scene = new THREE.Scene();
+  private readonly sky = new Sky();
   private readonly camera = new THREE.PerspectiveCamera(70, 1, 0.1, 1000);
   private readonly chunks = new Map<string, THREE.Group>();
   private readonly materials = {
     opaque: new THREE.MeshBasicMaterial({ vertexColors: true }),
-    cutout: new THREE.MeshBasicMaterial({ vertexColors: true, side: THREE.DoubleSide }),
+    cutout: new THREE.MeshBasicMaterial({ vertexColors: true, alphaTest: 0.5, side: THREE.DoubleSide }),
     translucent: new THREE.MeshBasicMaterial({
       vertexColors: true,
       transparent: true,
       opacity: 0.7,
       depthWrite: false,
+      side: THREE.DoubleSide,
     }),
   };
-  private readonly selection: THREE.LineSegments;
+  private readonly selection = new BlockSelection();
   private readonly fog = new THREE.Fog(DAY_SKY.clone(), 50, 120);
   private world: World | null = null;
   private unsubscribers: Unsubscribe[] = [];
   private renderDistance = DEFAULT_RENDER_DISTANCE;
-  private breakProgress = 0;
+  private atlasTexture: THREE.CanvasTexture<HTMLCanvasElement | OffscreenCanvas> | null = null;
+  private readonly culler = new ChunkCuller();
+  private readonly sortEye = new THREE.Vector3();
+  private readonly canvasSize = new THREE.Vector2();
+  private readonly sunLight = { value: 1 };
 
-  constructor() {
+  constructor(options: RendererOptions) {
+    if (options.atlas) {
+      this.atlasTexture = new THREE.CanvasTexture(options.atlas.image);
+      this.atlasTexture.flipY = false;
+      this.atlasTexture.magFilter = THREE.NearestFilter;
+      this.atlasTexture.minFilter = THREE.NearestFilter;
+      this.atlasTexture.generateMipmaps = false;
+      for (const material of Object.values(this.materials)) {
+        material.map = this.atlasTexture;
+      }
+    }
+    for (const material of Object.values(this.materials)) material.onBeforeCompile = shader => {
+      shader.uniforms.voxelSun = this.sunLight;
+      shader.vertexShader = 'attribute vec2 light; varying vec2 voxelLight;\n' + shader.vertexShader;
+      shader.vertexShader = shader.vertexShader.replace('#include <begin_vertex>', '#include <begin_vertex>\nvoxelLight = light;');
+      shader.fragmentShader = 'uniform float voxelSun; varying vec2 voxelLight;\n' + shader.fragmentShader;
+      shader.fragmentShader = shader.fragmentShader.replace('#include <color_fragment>',
+        '#include <color_fragment>\ndiffuseColor.rgb *= max(voxelLight.x * voxelSun, voxelLight.y);');
+      shader.fragmentShader = shader.fragmentShader.replace('#include <map_fragment>',
+        '#ifdef USE_MAP\nif (vMapUv.x >= 0.0) {\n#endif\n#include <map_fragment>\n#ifdef USE_MAP\n}\n#endif');
+    };
     this.camera.rotation.order = 'YXZ';
     this.scene.background = DAY_SKY.clone();
     this.scene.fog = this.fog;
-    const edges = new THREE.EdgesGeometry(new THREE.BoxGeometry(1.004, 1.004, 1.004));
-    this.selection = new THREE.LineSegments(edges, new THREE.LineBasicMaterial({ color: 0x000000 }));
-    this.selection.visible = false;
-    this.scene.add(this.selection);
+    this.scene.add(this.sky.group);
+    this.scene.add(this.selection.group);
     this.setRenderDistance(this.renderDistance);
   }
 
@@ -86,6 +111,8 @@ class BasicRenderer implements Renderer {
     this.unsubscribers = [];
     for (const key of [...this.chunks.keys()]) this.removeChunk(key);
     this.world = world;
+    this.selection.setBlock(null);
+    this.renderer?.renderLists.dispose();
     if (!world) return;
     for (const mesh of world.getChunkMeshes()) this.addChunk(mesh);
     this.unsubscribers.push(
@@ -104,6 +131,9 @@ class BasicRenderer implements Renderer {
       if (!geometry) continue;
       const object = new THREE.Mesh(geometry, this.materials[pass]);
       object.renderOrder = pass === 'translucent' ? 1 : 0;
+      object.userData.translucent = pass === 'translucent';
+      object.userData.worldBounds = geometry.boundingBox!.clone().translate(group.position);
+      object.frustumCulled = false; // The tighter AABB test is handled by ChunkCuller.
       group.add(object);
     }
     this.chunks.set(key, group);
@@ -122,7 +152,7 @@ class BasicRenderer implements Renderer {
     if (!this.renderer || !this.canvas) return;
     const width = this.canvas.clientWidth || 1;
     const height = this.canvas.clientHeight || 1;
-    const size = this.renderer.getSize(new THREE.Vector2());
+    const size = this.renderer.getSize(this.canvasSize);
     if (size.x !== width || size.y !== height) {
       this.renderer.setSize(width, height, false);
       this.camera.aspect = width / height;
@@ -135,25 +165,32 @@ class BasicRenderer implements Renderer {
     this.resize();
 
     const light = time.day.skyLight;
-    const sky = NIGHT_SKY.clone().lerp(DAY_SKY, light);
+    const sky = this.sky.update(camera.position, time.day, time.elapsed, this.camera.far, camera.underwater);
     const background = camera.underwater ? WATER_FOG : sky;
     (this.scene.background as THREE.Color).copy(background);
     this.fog.color.copy(background);
     const far = this.renderDistance * CHUNK_SIZE;
     this.fog.near = camera.underwater ? 2 : far * 0.6;
     this.fog.far = camera.underwater ? 24 : far;
-    const brightness = Math.max(light, 0.25);
-    for (const material of Object.values(this.materials)) material.color.setScalar(brightness);
+    this.sunLight.value = light;
 
     if (this.camera.fov !== camera.fov) {
       this.camera.fov = camera.fov;
       this.camera.updateProjectionMatrix();
     }
     this.camera.position.set(camera.position.x, camera.position.y, camera.position.z);
-    this.camera.rotation.set(camera.pitch, camera.yaw, 0);
-
-    const lines = this.selection.material as THREE.LineBasicMaterial;
-    lines.color.setRGB(this.breakProgress, 0, 0);
+    this.camera.rotation.set(-camera.pitch, camera.yaw, 0);
+    this.culler.update(this.chunks.values(), this.camera);
+    for (const group of this.chunks.values()) if (group.visible) for (const child of group.children) {
+      if (child.userData.translucent && child.visible) {
+        this.sortEye.copy(this.camera.position).sub(group.position);
+        const lastEye = child.userData.sortedEye as THREE.Vector3 | undefined;
+        if (lastEye && lastEye.distanceToSquared(this.sortEye) < 0.25) continue;
+        sortTransparentFaces((child as THREE.Mesh).geometry, this.sortEye);
+        if (lastEye) lastEye.copy(this.sortEye);
+        else child.userData.sortedEye = this.sortEye.clone();
+      }
+    }
 
     this.renderer.render(this.scene, this.camera);
   }
@@ -165,12 +202,11 @@ class BasicRenderer implements Renderer {
   }
 
   setSelection(block: Vec3 | null): void {
-    this.selection.visible = block !== null;
-    if (block) this.selection.position.set(block.x + 0.5, block.y + 0.5, block.z + 0.5);
+    this.selection.setBlock(block);
   }
 
   setBreakProgress(progress: number): void {
-    this.breakProgress = Math.min(1, Math.max(0, progress));
+    this.selection.setProgress(progress);
   }
 
   getStats(): RenderStats {
@@ -181,12 +217,14 @@ class BasicRenderer implements Renderer {
   dispose(): void {
     this.setWorld(null);
     for (const material of Object.values(this.materials)) material.dispose();
-    this.selection.geometry.dispose();
-    (this.selection.material as THREE.Material).dispose();
+    this.atlasTexture?.dispose();
+    this.sky.dispose();
+    this.selection.dispose();
     this.renderer?.dispose();
     this.renderer = null;
+    this.canvas = null;
   }
 }
 
-/** Erzeugt den (Platzhalter-)Renderer. Registry und Atlas werden in Phase 0 noch nicht genutzt. */
-export const createBasicRenderer: CreateRenderer = () => new BasicRenderer();
+/** Creates the renderer from the shared registry/atlas contract. */
+export const createBasicRenderer: CreateRenderer = options => new BasicRenderer(options);

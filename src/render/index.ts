@@ -5,5 +5,5 @@
 import type { CreateRenderer } from '../core';
 import { createBasicRenderer } from './basic-renderer';
 
-/** Erzeugt den Renderer (Phase 0: Grundszene mit Vertex-Farben). */
+/** Erzeugt den Three.js-Renderer mit Atlas, Licht und Himmel. */
 export const createRenderer: CreateRenderer = createBasicRenderer;
