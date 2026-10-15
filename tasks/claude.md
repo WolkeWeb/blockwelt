@@ -15,7 +15,7 @@ ohne Rückfrage bauen können. Jeder Bereich bekommt eine einfache, funktioniere
 - [x] C0-2 Ordnerstruktur aus AGENTS.md anlegen: `src/core, game, save, world, physics, render, ui, data, assets`,
       dazu `docs/`, `notes/` (mit je einer Notizdatei pro Agent, Abschnitte „Entscheidungen“, „Wünsche an die Verträge“, „Ideen“).
       Jeder `src`-Ordner hat eine `index.ts`.
-- [ ] C0-3 Verträge in `src/core/`, ausführlich mit JSDoc kommentiert:
+- [x] C0-3 Verträge in `src/core/`, ausführlich mit JSDoc kommentiert:
       - `types.ts`: Vec3, BlockId, ItemId, ItemStack, Face, GameMode
       - `registry.ts`: BlockDef (Härte, Transparenz, Lichtstärke, Drop, Textur-Namen je Seite, bevorzugtes Werkzeug),
         ItemDef, Recipe (geformt/formlos, 2×2/3×3), Registry-Interface, Textur-Atlas-Format (Name → UV-Rechteck)

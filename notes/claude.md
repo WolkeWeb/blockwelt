@@ -21,6 +21,27 @@
 - **C0-2** Jeder `src`-Ordner hat eine `index.ts` als einzigen öffentlichen Einstiegspunkt. Querverweise zwischen Bereichen
   laufen nur über `src/core/`; die Fabriken der Bereiche werden ausschließlich in `src/main.ts` zusammengesteckt.
   `docs/README.md` existiert nur, damit der Ordner im Git landet.
+- **C0-3 Verträge** (Kurzfassung, Details als JSDoc in `src/core/`):
+  - `BlockId` ist eine Zahl (kompakt in Chunks), `ItemId` ein Text (`snake_case`). Das Item eines Blocks heißt wie der Block (`BlockDef.name`).
+  - Feste IDs der bekannten Blöcke stehen in `core/blocks.ts` (`BLOCK.GRASS` usw.), damit Codex (Generator) und
+    OpenCode (Definitionen) parallel arbeiten können. Zusätzliche Blöcke ab ID 100.
+  - Alle Definitionen sind reine Daten (Structured Clone), damit Codex sie an Web Worker schicken kann.
+    `WorldOptions` bekommt deshalb `blocks` (Array) und das Atlas-*Layout* statt Registry/Bild.
+  - Atlas-UVs: normiert, `v` wächst nach unten (Bildkoordinaten) → Renderer nutzt `flipY = false`.
+  - Meshing gehört zur Welt (`ChunkMesh` mit Durchgängen opaque/cutout/translucent, Licht als eigenes Vertex-Attribut
+    [Himmel, Block]); der Renderer zeigt die Meshes nur an. Positionen relativ zum Chunk-Ursprung.
+  - `World.setBlock` auf nicht geladene Chunks merkt die Änderung vor → Spielstände lassen sich ohne Extra-API einspielen.
+  - `World.getSurfaceHeight` und `onChunkLoaded` ergänzt (für den Spawn-Punkt in C9).
+  - Physik: `stepPlayer` und `raycast` bekommen zusätzlich die Blockdefinitionen (`blocks`) als Parameter, weil sie
+    `solid`/`shape` kennen müssen. Fallstrecke führt die Physik im `PlayerBody` (`fallDistance`) und meldet Landungen.
+  - Yaw-Konvention: `yaw = 0` blickt nach Norden (−Z), positiv dreht nach links (wie three.js `rotation.y`).
+  - Tageszeit: Tick 0 = Sonnenaufgang, 6000 = Mittag; Sonne geht im Osten (+X) auf. `skyLight` 0,2–1 als Faktor.
+  - Renderer bekommt die Welt per `setWorld(world | null)` (Welt wechselt beim Laden, Renderer bleibt).
+  - GameApi: Die **Spiellogik** wertet alle Tasten aus, auch E/Esc/F3, und führt `screen`. Die Oberfläche zeichnet nur
+    den Zustand und ruft bei Klicks Aktionen auf. So gibt es kein doppeltes Umschalten.
+  - Zustand ist ein unveränderlicher Schnappschuss; `change`-Event höchstens einmal pro Frame.
+  - `createEventBus` liegt als kleiner gemeinsamer Baustein in `core/events.ts` (einzige Implementierung in `core/`
+    außer winzigen Hilfsfunktionen wie `toChunkCoord`).
 
 ## Wünsche an die Verträge
 
