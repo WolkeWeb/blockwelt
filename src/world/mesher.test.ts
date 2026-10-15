@@ -7,6 +7,17 @@ const mesh = (cells: [number, number, number, number][], blocks: readonly BlockD
   buildChunkMesh(0, 0, 1, blocks, (x, y, z) => cells.find(c => c[0] === x && c[1] === y && c[2] === z)?.[3] ?? BLOCK.AIR);
 
 describe('Meshing', () => {
+  it('trennt Wasser, Blätter und Glas; senkt nur freie Wasseroberflächen ab', () => {
+    const result = mesh([[1, 2, 1, BLOCK.WATER], [1, 3, 1, BLOCK.WATER], [5, 2, 1, BLOCK.LEAVES], [8, 2, 1, BLOCK.GLASS]]);
+    expect(result.opaque.indices.length).toBe(0);
+    expect(result.cutout.indices.length).toBe(72);
+    expect(result.translucent.indices.length).toBe(60);
+    const ys = Array.from(result.translucent.positions).filter((_, i) => i % 3 === 1);
+    expect(Math.max(...ys)).toBe(3.875);
+    expect(ys).toContain(3);
+    expect(ys).not.toContain(2.875);
+    expect(mesh([[1, 2, 1, BLOCK.GLASS], [2, 2, 1, BLOCK.GLASS]]).cutout.indices.length).toBe(60);
+  });
   it('entfernt innere Flächen, auch an Chunk-Grenzen', () => {
     expect(mesh([[0, 2, 0, BLOCK.STONE]]).opaque.indices.length).toBe(36);
     expect(mesh([[0, 2, 0, BLOCK.STONE], [1, 2, 0, BLOCK.STONE]]).opaque.indices.length).toBe(60);

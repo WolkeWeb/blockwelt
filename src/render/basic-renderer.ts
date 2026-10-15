@@ -4,6 +4,7 @@
  * und einen Auswahlrahmen. Wird in Phase 1 (X5, X6, X9–X12) ausgebaut.
  */
 import * as THREE from 'three';
+import { sortTransparentFaces } from './transparency';
 import {
   CHUNK_SIZE,
   DEFAULT_RENDER_DISTANCE,
@@ -48,12 +49,13 @@ class BasicRenderer implements Renderer {
   private readonly chunks = new Map<string, THREE.Group>();
   private readonly materials = {
     opaque: new THREE.MeshBasicMaterial({ vertexColors: true }),
-    cutout: new THREE.MeshBasicMaterial({ vertexColors: true, side: THREE.DoubleSide }),
+    cutout: new THREE.MeshBasicMaterial({ vertexColors: true, alphaTest: 0.5, side: THREE.DoubleSide }),
     translucent: new THREE.MeshBasicMaterial({
       vertexColors: true,
       transparent: true,
       opacity: 0.7,
       depthWrite: false,
+      side: THREE.DoubleSide,
     }),
   };
   private readonly selection: THREE.LineSegments;
@@ -63,6 +65,9 @@ class BasicRenderer implements Renderer {
   private renderDistance = DEFAULT_RENDER_DISTANCE;
   private breakProgress = 0;
   private atlasTexture: THREE.CanvasTexture<HTMLCanvasElement | OffscreenCanvas> | null = null;
+  private readonly lastSortPosition = new THREE.Vector3(Infinity, Infinity, Infinity);
+  private readonly sortEye = new THREE.Vector3();
+  private sortDirty = true;
 
   constructor(options: RendererOptions) {
     if (options.atlas) {
@@ -120,10 +125,12 @@ class BasicRenderer implements Renderer {
       if (!geometry) continue;
       const object = new THREE.Mesh(geometry, this.materials[pass]);
       object.renderOrder = pass === 'translucent' ? 1 : 0;
+      object.userData.translucent = pass === 'translucent';
       group.add(object);
     }
     this.chunks.set(key, group);
     this.scene.add(group);
+    this.sortDirty = true;
   }
 
   private removeChunk(key: string): void {
@@ -167,6 +174,16 @@ class BasicRenderer implements Renderer {
     }
     this.camera.position.set(camera.position.x, camera.position.y, camera.position.z);
     this.camera.rotation.set(camera.pitch, camera.yaw, 0);
+    if (this.sortDirty || this.lastSortPosition.distanceToSquared(this.camera.position) > 0.25) {
+      for (const group of this.chunks.values()) for (const child of group.children) {
+        if (child.userData.translucent) {
+          this.sortEye.copy(this.camera.position).sub(group.position);
+          sortTransparentFaces((child as THREE.Mesh).geometry, this.sortEye);
+        }
+      }
+      this.lastSortPosition.copy(this.camera.position);
+      this.sortDirty = false;
+    }
 
     const lines = this.selection.material as THREE.LineBasicMaterial;
     lines.color.setRGB(this.breakProgress, 0, 0);

@@ -37,7 +37,7 @@ class BufferBuilder {
   light: number[] = [];
   indices: number[] = [];
 
-  addFace(x: number, y: number, z: number, face: Face, color: number, ao: number[], rect?: UVRect): void {
+  addFace(x: number, y: number, z: number, face: Face, color: number, ao: number[], rect?: UVRect, top = 1): void {
     const base = this.positions.length / 3;
     const n = FACE_NORMALS[face];
     const shade = FACE_SHADE[face];
@@ -46,7 +46,7 @@ class BufferBuilder {
     const b = (color & 0xff) / 255;
     const uv = rect ? [rect.u0, rect.v1, rect.u1, rect.v1, rect.u1, rect.v0, rect.u0, rect.v0] : [-1, -1, -1, -1, -1, -1, -1, -1];
     FACE_CORNERS[face].forEach(([cx, cy, cz], i) => {
-      this.positions.push(x + cx, y + cy, z + cz);
+      this.positions.push(x + cx, y + cy * top, z + cz);
       this.normals.push(n.x, n.y, n.z);
       this.uvs.push(uv[i * 2], uv[i * 2 + 1]);
       this.colors.push(r * shade * ao[i], g * shade * ao[i], b * shade * ao[i]);
@@ -115,7 +115,8 @@ export function buildChunkMesh(
               return 1 - 0.2 * (sa && sb ? 3 : sa + sb + diagonal);
             });
             const rect = block.textures ? atlas?.regions[block.textures[face]] : undefined;
-            target.addFace(lx, y, lz, face, rect ? 0xffffff : block.color, ao, rect);
+            const top = block.shape === 'liquid' && def(getBlock(px, y + 1, pz))?.shape !== 'liquid' ? 14 / 16 : 1;
+            target.addFace(lx, y, lz, face, rect ? 0xffffff : block.color, ao, rect, top);
           }
         }
       }
