@@ -16,7 +16,7 @@ Oberfläche als HTML/CSS-Overlay über dem Canvas (kein Framework). Pixeliger Lo
 - [x] O4 Rezepte in `src/data/recipes.ts`: Bretter aus Stamm, Stöcke, Werkbank, Fackeln, alle Werkzeuge aus O3.
       Ein Test prüft, dass jedes Rezept nur existierende Items verwendet.
 - [x] O5 Hotbar unten mittig: 9 Slots, Auswahlrahmen, Item-Symbol (aus der Textur), Anzahl, Haltbarkeitsbalken.
-- [ ] O6 Inventar-Bildschirm (Taste E): 27 + 9 Slots, 2×2-Crafting mit Ergebnis-Slot, Item am Mauszeiger,
+- [x] O6 Inventar-Bildschirm (Taste E): 27 + 9 Slots, 2×2-Crafting mit Ergebnis-Slot, Item am Mauszeiger,
       Klick/Rechtsklick/Shift-Klick über die GameApi. Tooltip mit Item-Namen.
 - [ ] O7 Werkbank-Bildschirm (Rechtsklick auf Werkbank): 3×3-Crafting, sonst wie O6.
 - [ ] O8 HUD: Fadenkreuz, Herzen, Luftblasen (nur unter Wasser), Debug-Anzeige mit F3 (FPS, Position, Chunk, Blickrichtung).

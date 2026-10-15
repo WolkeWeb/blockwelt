@@ -23,6 +23,11 @@
   `hud.ts` (Hotbar), `styles.css`. Slots rufen nur `game.clickSlot`/`moveSlot` auf.
   Der Atlas wird einmal als Daten-URL gelesen und je Symbol per `background-position` ausgeschnitten
   (Skalierung 2 → 32 px pro 16-px-Kachel, `image-rendering: pixelated`).
+- **O6 – Inventar:** Slots sind Divs mit `click`/`contextmenu` (Rechtsklick) → `game.clickSlot`
+  (`shift` aus `event.shiftKey`) und nativem Drag & Drop → `game.moveSlot`. Der Stapel am Mauszeiger
+  hängt an einem `mousemove`-Listener auf `window`. Die UI registriert keine eigenen Tasten-Listener
+  für E/Esc/F3. Bei offenem Bildschirm fängt das Overlay die Zeigerereignisse ab (`pointer-events: auto`),
+  damit Klicks nicht beim Canvas landen.
 
 ## Wünsche an die Verträge
 
