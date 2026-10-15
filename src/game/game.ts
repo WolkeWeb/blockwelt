@@ -454,7 +454,7 @@ class StubGame implements Game {
     this.handleKeys();
     const world = this.world;
     if (!world) return;
-    this.totalTicks++;
+    if (this.clockRunning()) this.totalTicks++;
     world.update(this.body.position, this.settings.renderDistance);
 
     this.previousPosition = { ...this.body.position };
@@ -486,6 +486,11 @@ class StubGame implements Game {
     else this.resetBreaking();
     this.deps.renderer.setSelection(this.screen === 'playing' ? (this.target?.block ?? null) : null);
     this.dirty = true;
+  }
+
+  /** Die Tageszeit läuft nur, solange gespielt wird (nicht in Pause, Menü oder nach dem Tod). */
+  private clockRunning(): boolean {
+    return this.screen === 'playing' || this.screen === 'inventory' || this.screen === 'workbench';
   }
 
   // ----- Abbauen und Setzen -----
@@ -620,7 +625,9 @@ class StubGame implements Game {
       fov: this.settings.fov,
       underwater: this.body.headInWater,
     };
-    const time: FrameTime = { day: dayTimeFromTicks(this.totalTicks), alpha, delta, elapsed };
+    // Zwischen zwei Ticks weiterlaufen lassen, damit Sonne und Licht nicht ruckeln
+    const dayTicks = this.totalTicks + (this.clockRunning() ? alpha : 0);
+    const time: FrameTime = { day: dayTimeFromTicks(dayTicks), alpha, delta, elapsed };
     this.deps.renderer.render(camera, time);
     this.flush();
   }
