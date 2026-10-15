@@ -5,7 +5,7 @@ Inhalte und Oberfläche. Die Oberfläche spricht nur mit der `GameApi` aus `src/
 sie greift nie direkt auf Welt, Physik oder Renderer zu.
 Oberfläche als HTML/CSS-Overlay über dem Canvas (kein Framework). Pixeliger Look, gut lesbar.
 
-- [ ] O1 Prozedurale Texturen: Ein Generator in `src/assets/` zeichnet 16×16-Pixel-Texturen per Canvas
+- [x] O1 Prozedurale Texturen: Ein Generator in `src/assets/` zeichnet 16×16-Pixel-Texturen per Canvas
       und packt sie in einen Atlas (Format laut `src/core/registry.ts`). Feste Zufallszahlen, damit sie immer gleich aussehen.
       Texturen: Gras oben, Gras Seite, Erde, Stein, Bruchstein, Grundgestein, Sand, Kies, Holzstamm Seite,
       Holzstamm oben, Bretter, Blätter (mit Löchern), Glas, Wasser, Kohleerz, Eisenerz, Werkbank (oben/Seite/vorne), Fackel.
