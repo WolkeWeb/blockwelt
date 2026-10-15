@@ -79,6 +79,7 @@ export function createHud(options: {
   const element = el('div', 'bw-hud');
 
   const crosshair = el('div', 'bw-crosshair');
+  const clickHint = el('div', 'bw-click-hint', 'Klicken zum Spielen');
   const bottom = el('div', 'bw-bottom');
   const status = el('div', 'bw-status');
   const hearts = el('div', 'bw-hearts');
@@ -87,7 +88,7 @@ export function createHud(options: {
 
   status.append(hearts, air);
   bottom.append(status, hotbar);
-  element.append(crosshair, bottom);
+  element.append(crosshair, clickHint, bottom);
 
   const heartFills: HTMLElement[] = [];
   for (let i = 0; i < HEART_COUNT; i++) {
@@ -124,6 +125,7 @@ export function createHud(options: {
       setVisible(element, hudVisible || state.debugVisible);
       setVisible(bottom, hudVisible);
       setVisible(crosshair, state.screen === 'playing');
+      setVisible(clickHint, state.screen === 'playing' && !state.pointerLocked);
 
       if (hudVisible) {
         for (let i = 0; i < HEART_COUNT; i++) {

@@ -170,6 +170,12 @@ export interface GameState {
   readonly breakProgress: number;
   /** Ob die Debug-Anzeige (F3) eingeblendet ist. */
   readonly debugVisible: boolean;
+  /**
+   * Ob der Mauszeiger im Spiel gefangen ist (Pointer-Lock). Ist er es bei `screen === 'playing'` nicht
+   * (z. B. direkt nach dem Laden einer Welt oder nach Esc im Inventar), reagiert das Spiel nicht auf die Maus;
+   * die Oberfläche blendet dann einen Hinweis „Klicken zum Spielen“ ein.
+   */
+  readonly pointerLocked: boolean;
   /** Debug-Werte. */
   readonly debug: DebugInfo;
   /** Aktuelle Einstellungen. */

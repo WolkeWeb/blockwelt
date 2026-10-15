@@ -13,7 +13,7 @@ Zustand an.
 | `D` | nach rechts |
 | `Leertaste` | springen – im Wasser: aufwärts schwimmen – im Kreativmodus: aufsteigen |
 | `Shift` | schleichen (langsam; man fällt nicht von Kanten) – im Kreativmodus: absteigen |
-| `Strg` | sprinten (schneller) |
+| `W` halten, dann `Strg` | sprinten (schneller) – erst `W`, dann `Strg` drücken: `Strg` + `W` schließt im Browser sonst den Tab |
 | Doppelt `W` | sprinten (Alternative zu `Strg`) |
 
 Gehen ≈ 4,3 Blöcke/s, Sprinten ≈ 5,6 Blöcke/s, Schleichen ≈ 1,3 Blöcke/s. Die Sprunghöhe beträgt
@@ -23,9 +23,9 @@ etwa 1,25 Blöcke.
 
 | Eingabe | Wirkung |
 |---------|---------|
-| Maus bewegen | umsehen (nur mit Pointer-Lock; ein Klick ins Bild sperrt den Zeiger) |
+| Maus bewegen | umsehen (nur mit gefangenem Mauszeiger; ein Klick ins Bild fängt ihn – solange das nicht passiert ist, steht „Klicken zum Spielen“ im Bild) |
 | Linke Maustaste (halten) | Block abbauen bzw. angreifen |
-| Rechte Maustaste | Block setzen, Werkbank öffnen (Rechtsklick auf die Werkbank) |
+| Rechte Maustaste | Block setzen, Werkbank öffnen (Rechtsklick auf die Werkbank; mit `Shift` wird stattdessen ein Block an die Werkbank gesetzt) |
 | `1` … `9` | Hotbar-Slot wählen |
 | Mausrad | Hotbar durchblättern |
 
@@ -51,7 +51,7 @@ Haltbarkeitsbalken (grün → gelb → rot), solange sie benutzt sind.
 
 | Taste | Wirkung |
 |-------|---------|
-| `Esc` | Pausenmenü öffnen bzw. offenen Bildschirm schließen |
+| `Esc` | Pausenmenü öffnen (der Browser gibt dabei den Mauszeiger frei) bzw. offenen Bildschirm schließen |
 | `F3` | Debug-Anzeige ein- und ausblenden (FPS, Position, Chunk, Blickrichtung, Ziel, Chunks, Draw-Calls, Dreiecke) |
 
 Im Pausenmenü gibt es „Weiterspielen", „Einstellungen" und „Speichern und zum Titel". Der
@@ -60,6 +60,7 @@ Sichtweite (2–16 Chunks), Sichtfeld (30–110°) und Mausempfindlichkeit (0,1�
 
 ## Kreativmodus
 
-Der Kreativmodus bietet unendliche Blöcke, sofortiges Abbauen und kein Schaden. Fliegen ist aktiv:
-`Leertaste` steigt auf, `Shift` sinkt. Im Überlebensmodus gibt es Leben (10 Herzen), Fallschaden und
+Der Kreativmodus bietet unendliche Blöcke, sofortiges Abbauen und keinen Schaden. Neue Kreativ-Welten starten
+mit einer gefüllten Hotbar. Zweimal schnell `Leertaste` schaltet das Fliegen ein und aus; beim Fliegen steigt
+man mit `Leertaste` auf und sinkt mit `Shift`. Im Überlebensmodus gibt es Leben (10 Herzen), Fallschaden und
 Ertrinken (Luftblasen erscheinen nur unter Wasser).

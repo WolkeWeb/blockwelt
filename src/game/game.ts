@@ -253,6 +253,7 @@ class GameImpl implements Game {
       time: dayTimeFromTicks(this.totalTicks),
       breakProgress: this.breakProgress,
       debugVisible: this.debugVisible,
+      pointerLocked: this.input.locked,
       debug,
       settings: this.settings,
       deathCause: this.deathCause,

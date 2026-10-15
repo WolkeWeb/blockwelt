@@ -44,7 +44,10 @@ test('60 Sekunden spielen: laufen, abbauen, bauen, Inventar', async ({ page }, t
   const events = () => page.evaluate(() => (window as unknown as { __events: string[] }).__events.slice());
 
   // 2. Ins Spiel klicken (Pointer-Lock) und laufen: vorwärts mit Springen, dann seitwärts
+  const hint = page.locator('.bw-click-hint');
+  if (!(await gameState(page)).pointerLocked) await expect(hint).toBeVisible();
   await lockPointer(page);
+  await expect(hint).toBeHidden();
   const start = (await gameState(page)).debug.position;
   await page.keyboard.down('KeyW');
   for (let i = 0; i < 6; i++) {
