@@ -8,3 +8,4 @@
 
 ## Ideen
 - X2: Baumkandidaten in globalen 7×7-Zellen; jeder Chunk berücksichtigt Kandidaten im Kronenrand von zwei Blöcken. Keine nachträglichen Nachbar-Schreibzugriffe.
+- X3: Höhlen schneiden zwei 3D-Noise-Isoflächen zu verbundenen Röhren, geschützt durch mindestens drei Bodenschichten. Eigene Seed-Ströme für Höhlen/Erze; Kohle bis Y95, Eisen bis Y47.

@@ -1,4 +1,4 @@
-import { createNoise2D } from 'simplex-noise';
+import { createNoise2D, createNoise3D } from 'simplex-noise';
 import { BLOCK, CHUNK_HEIGHT, CHUNK_SIZE, SEA_LEVEL } from '../core';
 
 export const blockIndex = (x: number, y: number, z: number): number => (y * CHUNK_SIZE + z) * CHUNK_SIZE + x;
@@ -22,8 +22,14 @@ export function coordinateHash(seed: number, x: number, z: number): number {
 
 export class TerrainGenerator {
   private readonly noise;
+  private readonly caveA;
+  private readonly caveB;
+  private readonly ore;
   constructor(readonly seed: number) {
     this.noise = createNoise2D(randomFromSeed(seed));
+    this.caveA = createNoise3D(randomFromSeed(seed ^ 0x6ac379));
+    this.caveB = createNoise3D(randomFromSeed(seed ^ 0x1234ab));
+    this.ore = createNoise3D(randomFromSeed(seed ^ 0x7f9d35));
   }
 
   height(x: number, z: number): number {
@@ -79,6 +85,15 @@ export class TerrainGenerator {
         data[blockIndex(x, y, z)] = y === 0 ? BLOCK.BEDROCK : y > height ? BLOCK.WATER :
           y === height ? (beach ? BLOCK.SAND : BLOCK.GRASS) :
           y >= height - soil ? (beach ? BLOCK.SAND : BLOCK.DIRT) : BLOCK.STONE;
+        if (y > 3 && y < height - soil - 1) {
+          const i = blockIndex(x, y, z);
+          // The intersection of two warped noise isosurfaces forms narrow connected tubes.
+          const a = this.caveA(wx / 34, y / 26, wz / 34);
+          const b = this.caveB(wx / 34 + 11, y / 26, wz / 34 - 17);
+          if (a * a + b * b < 0.022) data[i] = BLOCK.AIR;
+          else if (y < 48 && this.ore(wx / 7 + 50, y / 6, wz / 7) > 0.68) data[i] = BLOCK.IRON_ORE;
+          else if (y < 96 && this.ore(wx / 9, y / 7, wz / 9) > 0.56) data[i] = BLOCK.COAL_ORE;
+        }
       }
     }
     this.addTrees(data, cx, cz);
