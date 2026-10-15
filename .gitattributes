@@ -1,0 +1,4 @@
+# Einheitliche Zeilenenden, damit drei Agents unter Windows keine Schein-Konflikte erzeugen
+* text=auto eol=lf
+*.ps1 text eol=crlf
+*.png binary
