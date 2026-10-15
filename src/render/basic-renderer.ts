@@ -6,6 +6,7 @@
 import * as THREE from 'three';
 import { sortTransparentFaces } from './transparency';
 import { Sky } from './sky';
+import { BlockSelection } from './selection';
 import {
   CHUNK_SIZE,
   DEFAULT_RENDER_DISTANCE,
@@ -60,12 +61,11 @@ class BasicRenderer implements Renderer {
       side: THREE.DoubleSide,
     }),
   };
-  private readonly selection: THREE.LineSegments;
+  private readonly selection = new BlockSelection();
   private readonly fog = new THREE.Fog(DAY_SKY.clone(), 50, 120);
   private world: World | null = null;
   private unsubscribers: Unsubscribe[] = [];
   private renderDistance = DEFAULT_RENDER_DISTANCE;
-  private breakProgress = 0;
   private atlasTexture: THREE.CanvasTexture<HTMLCanvasElement | OffscreenCanvas> | null = null;
   private readonly lastSortPosition = new THREE.Vector3(Infinity, Infinity, Infinity);
   private readonly sortEye = new THREE.Vector3();
@@ -97,10 +97,7 @@ class BasicRenderer implements Renderer {
     this.scene.background = DAY_SKY.clone();
     this.scene.fog = this.fog;
     this.scene.add(this.sky.group);
-    const edges = new THREE.EdgesGeometry(new THREE.BoxGeometry(1.004, 1.004, 1.004));
-    this.selection = new THREE.LineSegments(edges, new THREE.LineBasicMaterial({ color: 0x000000 }));
-    this.selection.visible = false;
-    this.scene.add(this.selection);
+    this.scene.add(this.selection.group);
     this.setRenderDistance(this.renderDistance);
   }
 
@@ -194,9 +191,6 @@ class BasicRenderer implements Renderer {
       this.sortDirty = false;
     }
 
-    const lines = this.selection.material as THREE.LineBasicMaterial;
-    lines.color.setRGB(this.breakProgress, 0, 0);
-
     this.renderer.render(this.scene, this.camera);
   }
 
@@ -207,12 +201,11 @@ class BasicRenderer implements Renderer {
   }
 
   setSelection(block: Vec3 | null): void {
-    this.selection.visible = block !== null;
-    if (block) this.selection.position.set(block.x + 0.5, block.y + 0.5, block.z + 0.5);
+    this.selection.setBlock(block);
   }
 
   setBreakProgress(progress: number): void {
-    this.breakProgress = Math.min(1, Math.max(0, progress));
+    this.selection.setProgress(progress);
   }
 
   getStats(): RenderStats {
@@ -225,8 +218,7 @@ class BasicRenderer implements Renderer {
     for (const material of Object.values(this.materials)) material.dispose();
     this.atlasTexture?.dispose();
     this.sky.dispose();
-    this.selection.geometry.dispose();
-    (this.selection.material as THREE.Material).dispose();
+    this.selection.dispose();
     this.renderer?.dispose();
     this.renderer = null;
   }
