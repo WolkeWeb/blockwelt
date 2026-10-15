@@ -1,6 +1,8 @@
-# Notizen: Codex
+﻿# Notizen: Codex
 
 ## Entscheidungen
+- X1: Weltweite Simplex-Oktaven mit eigenem 32-Bit-PRNG. Höhen 8–110, Meer bis einschließlich Y=62; Sand bei Oberflächen bis Y=63, 3–4 Bodenschichten. Grundgestein verwendet die feste BLOCK.BEDROCK-ID; Unzerstörbarkeit durch die Blockdefinition (negative Härte) und Spiellogik.
+- Änderungen an tasks/codex.md und dieser Notizdatei erfolgen gemäß der ausdrücklich verlangten Aufgabenpflege zusätzlich zu den drei eigenen Quellordnern.
 
 ## Wünsche an die Verträge
 

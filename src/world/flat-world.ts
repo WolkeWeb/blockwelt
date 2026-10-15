@@ -20,6 +20,7 @@ import {
   type WorldOptions,
 } from '../core';
 import { buildChunkMesh } from './mesher';
+import { TerrainGenerator } from './terrain';
 
 /** Höhe der Grasoberfläche der flachen Welt. */
 export const FLAT_SURFACE_Y = 63;
@@ -64,6 +65,7 @@ class Listeners<A extends unknown[]> {
 }
 
 class FlatWorld implements World {
+  private readonly terrain: TerrainGenerator;
   readonly seed: number;
   private readonly blocks: readonly BlockDef[];
   private readonly chunks = new Map<string, Chunk>();
@@ -75,6 +77,7 @@ class FlatWorld implements World {
 
   constructor(options: WorldOptions) {
     this.seed = options.seed;
+    this.terrain = new TerrainGenerator(this.seed);
     this.blocks = options.blocks;
   }
 
@@ -192,7 +195,7 @@ class FlatWorld implements World {
 
   private loadChunk(cx: number, cz: number): void {
     const key = chunkKey(cx, cz);
-    const chunk: Chunk = { cx, cz, data: generateFlat(), mesh: null, dirty: true, revision: 0 };
+    const chunk: Chunk = { cx, cz, data: this.terrain.generate(cx, cz), mesh: null, dirty: true, revision: 0 };
     const changes = this.pending.get(key);
     if (changes) {
       for (const [i, id] of changes) chunk.data[i] = id;

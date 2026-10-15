@@ -1,10 +1,10 @@
-# Aufgaben: Codex
+﻿# Aufgaben: Codex
 
 **Branch: `codex`. Ordner: `src/world/`, `src/physics/`, `src/render/`.**
 Die Engine: Welt, Physik, Darstellung. Ersetze die Platzhalter aus Phase 0 durch echte Implementierungen.
 Die Verträge in `src/core/` sind fest. Performance ist wichtig – miss sie, statt zu raten.
 
-- [ ] X1 Terrain: Höhenkarte aus mehreren Noise-Oktaven, deterministisch aus dem Seed.
+- [x] X1 Terrain: Höhenkarte aus mehreren Noise-Oktaven, deterministisch aus dem Seed.
       Ebenen, Hügel, gelegentlich Berge bis ca. Höhe 110, Strände aus Sand an Wasserkanten, Wasser bis Höhe 62.
       Schichten: Gras → 3–4 Erde → Stein, unten eine unzerstörbare Grundschicht. Unit-Tests (gleicher Seed = gleiche Welt).
 - [ ] X2 Bäume: Stamm + Blätterkrone, zufällig aber deterministisch verteilt, auch über Chunk-Grenzen hinweg korrekt.
@@ -26,3 +26,4 @@ Die Verträge in `src/core/` sind fest. Performance ist wichtig – miss sie, st
 - [ ] X11 Auswahlrahmen um den anvisierten Block und Abbau-Risse (10 Stufen) als Overlay.
 - [ ] X12 Performance: Frustum-Culling, Speicher entladener Chunks freigeben, FPS bei Sichtweite 8 messen
       (Playwright oder Dev-Overlay). Engpässe beheben. Messwerte in `notes/codex.md` eintragen.
+
