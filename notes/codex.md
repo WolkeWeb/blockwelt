@@ -7,3 +7,4 @@
 ## Wünsche an die Verträge
 
 ## Ideen
+- X2: Baumkandidaten in globalen 7×7-Zellen; jeder Chunk berücksichtigt Kandidaten im Kronenrand von zwei Blöcken. Keine nachträglichen Nachbar-Schreibzugriffe.

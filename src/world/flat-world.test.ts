@@ -41,7 +41,7 @@ describe('Terrain', () => {
         expect(at(h)).toBe(h <= 63 ? BLOCK.SAND : BLOCK.GRASS);
         expect(at(h - 3)).toBe(h <= 63 ? BLOCK.SAND : BLOCK.DIRT);
         if (h < 62) expect(at(62)).toBe(BLOCK.WATER);
-        expect(at(Math.max(h, 62) + 1)).toBe(BLOCK.AIR);
+        expect(at(127)).toBe(BLOCK.AIR);
       }
     }
   });

@@ -34,6 +34,40 @@ export class TerrainGenerator {
     return Math.max(8, Math.min(110, Math.floor(63 + continent * 13 + hills + mountains)));
   }
 
+  /** One candidate per 7×7 cell; a two-block crown may extend into any neighbor. */
+  tree(cellX: number, cellZ: number): { x: number; y: number; z: number; height: number } | null {
+    if (coordinateHash(this.seed ^ 9127, cellX, cellZ) > 0.28) return null;
+    const x = cellX * 7 + Math.floor(coordinateHash(this.seed ^ 3719, cellX, cellZ) * 7);
+    const z = cellZ * 7 + Math.floor(coordinateHash(this.seed ^ 7261, cellX, cellZ) * 7);
+    const y = this.height(x, z) + 1;
+    if (y <= SEA_LEVEL + 2 || y > 100) return null;
+    return { x, y, z, height: 4 + Math.floor(coordinateHash(this.seed ^ 1357, x, z) * 3) };
+  }
+
+  private addTrees(data: Uint16Array, cx: number, cz: number): void {
+    const ox = cx * CHUNK_SIZE, oz = cz * CHUNK_SIZE;
+    const put = (x: number, y: number, z: number, id: number) => {
+      const lx = x - ox, lz = z - oz;
+      if (lx < 0 || lx >= 16 || lz < 0 || lz >= 16 || y < 1 || y >= 128) return;
+      const i = blockIndex(lx, y, lz);
+      if (data[i] === BLOCK.AIR || (id === BLOCK.LOG && data[i] === BLOCK.LEAVES)) data[i] = id;
+    };
+    for (let gz = Math.floor((oz - 2) / 7); gz <= Math.floor((oz + 17) / 7); gz++) {
+      for (let gx = Math.floor((ox - 2) / 7); gx <= Math.floor((ox + 17) / 7); gx++) {
+        const t = this.tree(gx, gz);
+        if (!t) continue;
+        for (let dy = t.height - 3; dy <= t.height; dy++) {
+          const radius = dy === t.height ? 1 : 2;
+          for (let dz = -radius; dz <= radius; dz++) for (let dx = -radius; dx <= radius; dx++) {
+            if (Math.abs(dx) === 2 && Math.abs(dz) === 2) continue;
+            put(t.x + dx, t.y + dy, t.z + dz, BLOCK.LEAVES);
+          }
+        }
+        for (let dy = 0; dy < t.height; dy++) put(t.x, t.y + dy, t.z, BLOCK.LOG);
+      }
+    }
+  }
+
   generate(cx: number, cz: number): Uint16Array {
     const data = new Uint16Array(CHUNK_SIZE * CHUNK_SIZE * CHUNK_HEIGHT);
     for (let z = 0; z < CHUNK_SIZE; z++) for (let x = 0; x < CHUNK_SIZE; x++) {
@@ -47,6 +81,7 @@ export class TerrainGenerator {
           y >= height - soil ? (beach ? BLOCK.SAND : BLOCK.DIRT) : BLOCK.STONE;
       }
     }
+    this.addTrees(data, cx, cz);
     return data;
   }
 }
