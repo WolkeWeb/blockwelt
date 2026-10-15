@@ -18,6 +18,9 @@
   bewusst aus (Voxel-Code mit vielen Array-Zugriffen bliebe sonst unlesbar).
 - **Arbeitsweise Phase 0:** Phase 0 wurde in einer Linux-Umgebung erstellt und per Git-Bundle ins Windows-Repo übernommen.
   Alle Scripts sind trotzdem plattformunabhängig (kein `rm`, keine Umgebungsvariablen-Syntax in npm-Scripts).
+- **C0-2** Jeder `src`-Ordner hat eine `index.ts` als einzigen öffentlichen Einstiegspunkt. Querverweise zwischen Bereichen
+  laufen nur über `src/core/`; die Fabriken der Bereiche werden ausschließlich in `src/main.ts` zusammengesteckt.
+  `docs/README.md` existiert nur, damit der Ordner im Git landet.
 
 ## Wünsche an die Verträge
 

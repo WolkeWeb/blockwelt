@@ -12,7 +12,7 @@ ohne Rückfrage bauen können. Jeder Bereich bekommt eine einfache, funktioniere
 
 - [x] C0-1 Projekt-Setup: Vite + TypeScript strict + three + simplex-noise + Vitest + Playwright (Chromium installieren).
       Scripts: `dev`, `build`, `test`, `e2e`, `check` (= `tsc --noEmit && vitest run && vite build`). `.gitignore` anlegen. Alle Scripts müssen unter Windows in PowerShell laufen.
-- [ ] C0-2 Ordnerstruktur aus AGENTS.md anlegen: `src/core, game, save, world, physics, render, ui, data, assets`,
+- [x] C0-2 Ordnerstruktur aus AGENTS.md anlegen: `src/core, game, save, world, physics, render, ui, data, assets`,
       dazu `docs/`, `notes/` (mit je einer Notizdatei pro Agent, Abschnitte „Entscheidungen“, „Wünsche an die Verträge“, „Ideen“).
       Jeder `src`-Ordner hat eine `index.ts`.
 - [ ] C0-3 Verträge in `src/core/`, ausführlich mit JSDoc kommentiert:
