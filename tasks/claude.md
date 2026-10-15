@@ -47,7 +47,7 @@ Nutze die anderen Bereiche ausschließlich über die Verträge in `src/core/`.
 
 - [x] C1 Spieler-Steuerung: WASD, Maus, Springen, Sprinten (Strg/Doppel-W), Schleichen (Shift, nicht von Kanten fallen).
       Nutzt `stepPlayer` aus dem Physik-Vertrag.
-- [ ] C2 Blöcke abbauen: Abbauzeit abhängig von Härte und Werkzeug, Fortschritt an Renderer und Oberfläche melden,
+- [x] C2 Blöcke abbauen: Abbauzeit abhängig von Härte und Werkzeug, Fortschritt an Renderer und Oberfläche melden,
       Drop landet im Inventar. Blöcke setzen: nicht in die eigene Hitbox, nur an die getroffene Fläche.
 - [ ] C3 Inventar-Modell: 27 Slots + 9 Hotbar, Stapel bis 64 (Werkzeuge 1), Hotbar-Auswahl per Mausrad und 1–9,
       Slots tauschen/teilen/zusammenlegen, Rechtsklick-Verhalten wie gewohnt. Unit-Tests.

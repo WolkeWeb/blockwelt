@@ -12,7 +12,9 @@ import {
   MIN_RENDER_DISTANCE,
   PLAYER_EYE_HEIGHT,
   PLAYER_REACH,
+  TICKS_PER_SECOND,
   TICK_SECONDS,
+  BLOCK,
   createEventBus,
   directionFromAngles,
   toChunkCoord,
@@ -23,6 +25,7 @@ import {
   type Face,
   type FrameTime,
   type GameApi,
+  type GameMode,
   type GameEvents,
   type GameState,
   type InventoryState,
@@ -41,9 +44,12 @@ import {
   type World,
   type WorldInfo,
 } from '../core';
+import { canPlaceBlock } from './building';
 import { Input } from './input';
+import { INVENTORY_SIZE, addItem, removeFromSlot } from './inventory';
 import { SprintTracker, buildMovementInput, type MovementKeys } from './movement';
 import { dayTimeFromTicks } from './time';
+import { breakSeconds, breakTicks, rollDrop } from './tools';
 
 /** Abhängigkeiten der Spiellogik – alles kommt über die Verträge aus `src/core/`. */
 export interface GameDeps {
@@ -79,7 +85,8 @@ export interface Game extends GameApi {
 const MOUSE_FACTOR = 0.0025;
 const PITCH_LIMIT = Math.PI / 2 - 0.001;
 const DEFAULT_SETTINGS: Settings = { renderDistance: DEFAULT_RENDER_DISTANCE, fov: 70, mouseSensitivity: 1 };
-const INVENTORY_SIZE = 36;
+/** Pause in Ticks zwischen zwei Abbauvorgängen bzw. zwei gesetzten Blöcken bei gehaltener Taste. */
+const ACTION_COOLDOWN_TICKS = 5;
 const START_TICKS = 3000;
 
 function emptyCrafting(size: 2 | 3): CraftingState {
@@ -146,6 +153,9 @@ class StubGame implements Game {
   private state: GameState;
   private dirty = false;
   private tickCount = 0;
+  private breakProgress = 0;
+  private breaking: { readonly position: Vec3; ticks: number; total: number } | null = null;
+  private actionCooldown = 0;
   private readonly sprint = new SprintTracker();
 
   constructor(deps: GameDeps) {
@@ -183,7 +193,7 @@ class StubGame implements Game {
       maxAir: 300,
       underwater: this.body.headInWater,
       time: dayTimeFromTicks(this.totalTicks),
-      breakProgress: 0,
+      breakProgress: this.breakProgress,
       debugVisible: this.debugVisible,
       debug,
       settings: this.settings,
@@ -392,7 +402,101 @@ class StubGame implements Game {
       directionFromAngles(this.yaw, this.pitch),
       PLAYER_REACH,
     );
-    this.deps.renderer.setSelection(this.target?.block ?? null);
+    if (this.screen === 'playing') this.updateInteraction(world);
+    else this.resetBreaking();
+    this.deps.renderer.setSelection(this.screen === 'playing' ? (this.target?.block ?? null) : null);
+    this.dirty = true;
+  }
+
+  // ----- Abbauen und Setzen -----
+
+  private get mode(): GameMode {
+    return this.worldInfo?.mode ?? 'survival';
+  }
+
+  private resetBreaking(): void {
+    if (this.breaking === null && this.breakProgress === 0) return;
+    this.breaking = null;
+    this.breakProgress = 0;
+    this.deps.renderer.setBreakProgress(0);
+  }
+
+  private updateInteraction(world: World): void {
+    if (this.actionCooldown > 0) this.actionCooldown--;
+    const placeClick = this.input.consumeClick(2);
+    this.input.consumeClick(0);
+    const hit = this.target;
+
+    if (this.input.isButtonDown(0) && hit) this.updateBreaking(world, hit);
+    else this.resetBreaking();
+
+    const placeWanted = placeClick || (this.input.isButtonDown(2) && this.actionCooldown === 0);
+    if (placeWanted && hit) this.placeBlock(world, hit);
+  }
+
+  private updateBreaking(world: World, hit: RaycastHit): void {
+    const pos = hit.block;
+    const current = this.breaking;
+    if (!current || current.position.x !== pos.x || current.position.y !== pos.y || current.position.z !== pos.z) {
+      const block = this.registry.getBlockDef(hit.blockId);
+      const tool = this.heldItemDef()?.tool ?? null;
+      const ticks = breakTicks(breakSeconds(block, tool, this.mode), TICKS_PER_SECOND);
+      this.breaking = { position: { ...pos }, ticks: 0, total: ticks };
+    }
+    const breaking = this.breaking!;
+    if (this.actionCooldown > 0 || !Number.isFinite(breaking.total)) return;
+    breaking.ticks++;
+    this.breakProgress = Math.min(1, breaking.ticks / breaking.total);
+    this.deps.renderer.setBreakProgress(this.breakProgress);
+    if (breaking.ticks >= breaking.total) {
+      this.breakBlock(world, hit);
+      this.resetBreaking();
+      this.actionCooldown = ACTION_COOLDOWN_TICKS;
+    }
+  }
+
+  private breakBlock(world: World, hit: RaycastHit): void {
+    const pos = hit.block;
+    const block = this.registry.getBlockDef(hit.blockId);
+    if (!world.setBlock(pos.x, pos.y, pos.z, BLOCK.AIR)) return;
+    this.events.emit('blockBroken', { position: { ...pos }, block: hit.blockId });
+    if (this.mode === 'survival') {
+      const drop = rollDrop(block);
+      if (drop) this.giveItem(drop);
+    }
+  }
+
+  /** Legt Items ins Inventar (was nicht passt, geht verloren – es gibt noch keine Item-Entities). */
+  private giveItem(stack: ItemStack): void {
+    const result = addItem(this.inventory.slots, this.registry, stack);
+    const taken = stack.count - (result.remainder?.count ?? 0);
+    if (taken === 0) return;
+    this.inventory = { ...this.inventory, slots: result.slots };
+    this.events.emit('itemPickedUp', { stack: { ...stack, count: taken } });
+    this.dirty = true;
+  }
+
+  private heldStack(): ItemStack | null {
+    return this.inventory.slots[this.inventory.selected] ?? null;
+  }
+
+  private heldItemDef() {
+    const stack = this.heldStack();
+    return stack ? this.registry.getItemDef(stack.item) : undefined;
+  }
+
+  private placeBlock(world: World, hit: RaycastHit): void {
+    const held = this.heldStack();
+    const blockId = held ? this.registry.getItemDef(held.item)?.block : null;
+    if (!held || blockId === null || blockId === undefined) return;
+    const place = hit.place;
+    if (!canPlaceBlock(world, this.registry, place, blockId, this.body.position)) return;
+    if (!world.setBlock(place.x, place.y, place.z, blockId)) return;
+    this.actionCooldown = ACTION_COOLDOWN_TICKS;
+    if (this.mode === 'survival') {
+      this.inventory = { ...this.inventory, slots: removeFromSlot(this.inventory.slots, this.inventory.selected, 1) };
+    }
+    this.events.emit('blockPlaced', { position: { ...place }, block: blockId });
     this.dirty = true;
   }
 
