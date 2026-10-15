@@ -11,7 +11,7 @@ Oberfläche als HTML/CSS-Overlay über dem Canvas (kein Framework). Pixeliger Lo
       Holzstamm oben, Bretter, Blätter (mit Löchern), Glas, Wasser, Kohleerz, Eisenerz, Werkbank (oben/Seite/vorne), Fackel.
 - [x] O2 Block-Definitionen in `src/data/blocks.ts` für alle Blöcke aus O1: Härte, Transparenz, Lichtstärke
       (Fackel 14), Drop (Stein → Bruchstein, Gras → Erde, Blätter → nichts), bevorzugtes Werkzeug.
-- [ ] O3 Items in `src/data/items.ts`: Stock, Kohle, Werkzeuge aus Holz und Stein (Spitzhacke, Axt, Schaufel, Schwert)
+- [x] O3 Items in `src/data/items.ts`: Stock, Kohle, Werkzeuge aus Holz und Stein (Spitzhacke, Axt, Schaufel, Schwert)
       mit Haltbarkeit und Abbau-Geschwindigkeit.
 - [ ] O4 Rezepte in `src/data/recipes.ts`: Bretter aus Stamm, Stöcke, Werkbank, Fackeln, alle Werkzeuge aus O3.
       Ein Test prüft, dass jedes Rezept nur existierende Items verwendet.

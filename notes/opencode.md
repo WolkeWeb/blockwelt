@@ -12,6 +12,9 @@
 - **O2 – Blöcke:** Eisenerz droppt sich selbst, braucht aber eine Steinspitzhacke (`requiredToolLevel: 2`),
   weil es (noch) kein Roheisen-Item gibt. Blätter und Glas droppen nichts (keine Schere im Spiel).
   Wasser ist `replaceable` (hineinsetzen möglich), Fackel `cutout` mit `lightLevel: 14`.
+- **O3 – Items:** Werkzeugwerte: Holz Stufe 1/Speed 2/Haltbarkeit 59, Stein Stufe 2/Speed 4/Haltbarkeit 131.
+  Schaden in halben Herzen: Spitzhacke 2/3, Axt 3/4, Schaufel 2/3, Schwert 4/5 (Holz/Stein).
+  Anzeigenamen wie „Holzspitzhacke", „Steinschwert" (Material + Werkzeug kleingeschrieben).
 
 ## Wünsche an die Verträge
 

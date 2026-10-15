@@ -4,9 +4,10 @@
  */
 import type { CreateRegistry } from '../core';
 import { BLOCKS } from './blocks';
-import { blockItems } from './items';
+import { ITEMS, blockItems } from './items';
 import { RECIPES } from './recipes';
 import { buildRegistry } from './registry';
 
 /** Erzeugt die Registry mit allen Inhalten des Spiels. */
-export const createRegistry: CreateRegistry = () => buildRegistry(BLOCKS, blockItems(BLOCKS), RECIPES);
+export const createRegistry: CreateRegistry = () =>
+  buildRegistry(BLOCKS, [...blockItems(BLOCKS), ...ITEMS], RECIPES);
