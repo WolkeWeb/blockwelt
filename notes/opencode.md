@@ -39,6 +39,8 @@
   (`document.activeElement`). Bei jeder Weltwahl wird `listWorlds()` neu geladen.
   Ein dunkler Schleier (`.bw-dim`) und `pointer-events: auto` auf dem Overlay verhindern, dass Klicks
   während eines Menüs beim Canvas landen.
+- **O10 – Doku:** `docs/STEUERUNG.md` und `docs/BLOECKE.md` (Tabellen aus den Definitionen abgeleitet),
+  Querverweise in `docs/README.md`. Keine Bildschirmfotos, keine Markennamen.
 
 ## Wünsche an die Verträge
 
