@@ -22,6 +22,7 @@ import {
   type ClickButton,
   type CraftingState,
   type CreateWorld,
+  type DamageCause,
   type DebugInfo,
   type Face,
   type FrameTime,
@@ -49,6 +50,17 @@ import {
 } from '../core';
 import { canPlaceBlock } from './building';
 import {
+  MAX_AIR,
+  MAX_HEALTH,
+  VOID_Y,
+  applyDamage,
+  fallDamage,
+  freshVitals,
+  isDead,
+  stepVitals,
+  type Vitals,
+} from './vitals';
+import {
   clickContainer,
   flushToInventory,
   moveContainerSlot,
@@ -57,7 +69,7 @@ import {
 import { Input } from './input';
 import { consumeIngredients, craftResult } from './crafting';
 import { INVENTORY_SIZE, addItem, canMerge, maxStackOf, removeFromSlot } from './inventory';
-import { SprintTracker, buildMovementInput, type MovementKeys } from './movement';
+import { DoubleTap, SprintTracker, buildMovementInput, type MovementKeys } from './movement';
 import { dayTimeFromTicks } from './time';
 import { breakSeconds, breakTicks, canHarvest, damageTool, rollDrop, toolWear } from './tools';
 
@@ -167,6 +179,11 @@ class StubGame implements Game {
   private state: GameState;
   private dirty = false;
   private tickCount = 0;
+  private vitals: Vitals = freshVitals();
+  private flying = false;
+  private deathCause: DamageCause | null = null;
+  private spawn: Vec3 = { x: 8.5, y: 70, z: 8.5 };
+  private readonly flyTap = new DoubleTap();
   private breakProgress = 0;
   private breaking: { readonly position: Vec3; ticks: number; total: number } | null = null;
   private actionCooldown = 0;
@@ -199,19 +216,19 @@ class StubGame implements Game {
     return {
       screen: this.screen,
       world: this.worldInfo,
-      mode: this.worldInfo?.mode ?? 'survival',
+      mode: this.mode,
       inventory: this.inventory,
-      health: 20,
-      maxHealth: 20,
-      air: 300,
-      maxAir: 300,
+      health: this.vitals.health,
+      maxHealth: MAX_HEALTH,
+      air: this.vitals.air,
+      maxAir: MAX_AIR,
       underwater: this.body.headInWater,
       time: dayTimeFromTicks(this.totalTicks),
       breakProgress: this.breakProgress,
       debugVisible: this.debugVisible,
       debug,
       settings: this.settings,
-      deathCause: null,
+      deathCause: this.deathCause,
     };
   }
 
@@ -283,8 +300,11 @@ class StubGame implements Game {
     this.worldInfo = info;
     this.deps.renderer.setWorld(this.world);
     this.deps.renderer.setRenderDistance(this.settings.renderDistance);
-    this.body.position = { x: 8.5, y: 70, z: 8.5 };
-    this.previousPosition = { ...this.body.position };
+    this.vitals = freshVitals();
+    this.deathCause = null;
+    this.flying = false;
+    if (info.mode === 'creative') this.inventory = { ...this.inventory, slots: this.creativeStarterItems() };
+    this.placePlayer(this.spawn);
     this.setScreen('playing');
     this.events.emit('worldLoaded', { world: info });
   }
@@ -315,9 +335,48 @@ class StubGame implements Game {
     this.setScreen('playing');
   }
 
+  /** Setzt den Spieler an eine Stelle (Füße) und nimmt ihm alle Geschwindigkeit. */
+  private placePlayer(position: Vec3): void {
+    this.body.position = { ...position };
+    this.body.velocity = { x: 0, y: 0, z: 0 };
+    this.body.fallDistance = 0;
+    this.body.onGround = false;
+    this.previousPosition = { ...position };
+  }
+
+  /** Kreativ-Start: ein Vorrat an Blöcken in der Hotbar (es gibt keine Kreativ-Truhe). */
+  private creativeStarterItems(): (ItemStack | null)[] {
+    const slots = this.inventory.slots.map(() => null) as (ItemStack | null)[];
+    const names = ['grass', 'dirt', 'stone', 'cobblestone', 'planks', 'log', 'glass', 'sand', 'torch'];
+    let next = 0;
+    for (const name of names) {
+      if (next >= 9) break;
+      if (this.registry.getItemDef(name)) slots[next++] = { item: name, count: 64 };
+    }
+    return slots;
+  }
+
+  /** Schaden für den Spieler (nur im Überleben). Bei 0 Leben: Tod. */
+  private hurt(amount: number, cause: DamageCause): void {
+    if (this.mode !== 'survival' || amount <= 0 || isDead(this.vitals)) return;
+    this.vitals = applyDamage(this.vitals, amount);
+    this.dirty = true;
+    this.events.emit('damage', { amount, cause });
+    if (isDead(this.vitals)) {
+      this.deathCause = cause;
+      this.flying = false;
+      this.events.emit('death', { cause });
+      this.setScreen('dead');
+    }
+  }
+
   respawn(): void {
-    this.body.position = { x: 8.5, y: 70, z: 8.5 };
-    this.previousPosition = { ...this.body.position };
+    if (this.screen !== 'dead' && this.screen !== 'paused') return;
+    this.vitals = freshVitals();
+    this.deathCause = null;
+    this.flying = false;
+    this.sprint.reset();
+    this.placePlayer(this.spawn);
     this.setScreen('playing');
     this.events.emit('respawn', { position: { ...this.body.position } });
   }
@@ -451,6 +510,7 @@ class StubGame implements Game {
   tick(): void {
     this.tickCount++;
     const wPressed = this.input.consumePress('KeyW');
+    const spacePressed = this.input.consumePress('Space');
     this.handleKeys();
     const world = this.world;
     if (!world) return;
@@ -470,8 +530,11 @@ class StubGame implements Game {
         ctrl: key('ControlLeft') || key('ControlRight'),
       };
       const sprinting = this.sprint.update(this.tickCount, wPressed, keys);
-      const input = buildMovementInput(keys, this.yaw, sprinting, true);
-      this.deps.stepPlayer(world, this.registry, this.body, input, TICK_SECONDS);
+      if (spacePressed && this.mode === 'creative' && this.flyTap.tap(this.tickCount)) this.flying = !this.flying;
+      if (this.mode !== 'creative') this.flying = false;
+      const input = buildMovementInput(keys, this.yaw, sprinting, this.flying);
+      const step = this.deps.stepPlayer(world, this.registry, this.body, input, TICK_SECONDS);
+      this.updateVitals(step.landed ? step.fallDistance : 0);
     }
 
     const eye = this.eyePosition(1);
@@ -486,6 +549,30 @@ class StubGame implements Game {
     else this.resetBreaking();
     this.deps.renderer.setSelection(this.screen === 'playing' ? (this.target?.block ?? null) : null);
     this.dirty = true;
+  }
+
+  /** Überlebensregeln für einen Tick: Fallschaden, Ertrinken, Heilung, Sturz aus der Welt. */
+  private updateVitals(fallDistance: number): void {
+    if (this.mode === 'creative') {
+      if (this.body.position.y < VOID_Y) this.placePlayer(this.spawn);
+      return;
+    }
+    if (this.body.position.y < VOID_Y) {
+      this.hurt(MAX_HEALTH, 'void');
+      return;
+    }
+    this.hurt(fallDamage(fallDistance), 'fall');
+    if (isDead(this.vitals)) return;
+    const step = stepVitals(this.vitals, this.mode, this.body.headInWater);
+    this.vitals = step.vitals;
+    if (step.damage > 0 && step.cause) {
+      this.events.emit('damage', { amount: step.damage, cause: step.cause });
+      if (isDead(this.vitals)) {
+        this.deathCause = step.cause;
+        this.events.emit('death', { cause: step.cause });
+        this.setScreen('dead');
+      }
+    }
   }
 
   /** Die Tageszeit läuft nur, solange gespielt wird (nicht in Pause, Menü oder nach dem Tod). */

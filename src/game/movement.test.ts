@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { SprintTracker, buildMovementInput, type MovementKeys } from './movement';
+import { DoubleTap, SprintTracker, buildMovementInput, type MovementKeys } from './movement';
 
 const idle: MovementKeys = { forward: false, back: false, left: false, right: false, jump: false, sneak: false, ctrl: false };
 const walking: MovementKeys = { ...idle, forward: true };
@@ -39,5 +39,15 @@ describe('buildMovementInput', () => {
     const input = buildMovementInput({ ...idle, forward: true, left: true }, 1.5, false, false);
     expect(input).toMatchObject({ forward: 1, strafe: -1, yaw: 1.5, sprint: false, flying: false });
     expect(buildMovementInput({ ...idle, forward: true, back: true }, 0, false, false).forward).toBe(0);
+  });
+});
+
+describe('DoubleTap', () => {
+  it('erkennt zwei schnelle Tipper, dritter zählt neu', () => {
+    const d = new DoubleTap();
+    expect(d.tap(0)).toBe(false);
+    expect(d.tap(3)).toBe(true);
+    expect(d.tap(4)).toBe(false);
+    expect(d.tap(30)).toBe(false);
   });
 });

@@ -60,3 +60,19 @@ export function buildMovementInput(keys: MovementKeys, yaw: number, sprint: bool
     flying,
   };
 }
+
+/** Erkennt ein Doppeltippen (z. B. zweimal Leertaste = Flugmodus umschalten). */
+export class DoubleTap {
+  private last = Number.NEGATIVE_INFINITY;
+
+  /** Meldet einen Tastendruck im Tick `tick`; `true`, wenn er das zweite Tippen eines Doppeltippens ist. */
+  tap(tick: number): boolean {
+    const isDouble = tick - this.last <= DOUBLE_TAP_TICKS;
+    this.last = isDouble ? Number.NEGATIVE_INFINITY : tick;
+    return isDouble;
+  }
+
+  reset(): void {
+    this.last = Number.NEGATIVE_INFINITY;
+  }
+}
