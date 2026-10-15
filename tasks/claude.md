@@ -49,7 +49,7 @@ Nutze die anderen Bereiche ausschließlich über die Verträge in `src/core/`.
       Nutzt `stepPlayer` aus dem Physik-Vertrag.
 - [x] C2 Blöcke abbauen: Abbauzeit abhängig von Härte und Werkzeug, Fortschritt an Renderer und Oberfläche melden,
       Drop landet im Inventar. Blöcke setzen: nicht in die eigene Hitbox, nur an die getroffene Fläche.
-- [ ] C3 Inventar-Modell: 27 Slots + 9 Hotbar, Stapel bis 64 (Werkzeuge 1), Hotbar-Auswahl per Mausrad und 1–9,
+- [x] C3 Inventar-Modell: 27 Slots + 9 Hotbar, Stapel bis 64 (Werkzeuge 1), Hotbar-Auswahl per Mausrad und 1–9,
       Slots tauschen/teilen/zusammenlegen, Rechtsklick-Verhalten wie gewohnt. Unit-Tests.
 - [ ] C4 Crafting-Logik: 2×2 und 3×3, geformte und formlose Rezepte, Rezepte verschiebbar im Raster,
       gespiegelte Rezepte erlaubt, liest Rezepte aus der Registry. Unit-Tests.

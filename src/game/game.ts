@@ -19,6 +19,7 @@ import {
   directionFromAngles,
   toChunkCoord,
   type CameraState,
+  type ClickButton,
   type CraftingState,
   type CreateWorld,
   type DebugInfo,
@@ -38,6 +39,7 @@ import {
   type Renderer,
   type Screen,
   type Settings,
+  type SlotRef,
   type StepPlayer,
   type Unsubscribe,
   type Vec3,
@@ -45,6 +47,12 @@ import {
   type WorldInfo,
 } from '../core';
 import { canPlaceBlock } from './building';
+import {
+  clickContainer,
+  flushToInventory,
+  moveContainerSlot,
+  type Container,
+} from './container';
 import { Input } from './input';
 import { INVENTORY_SIZE, addItem, removeFromSlot } from './inventory';
 import { SprintTracker, buildMovementInput, type MovementKeys } from './movement';
@@ -91,6 +99,10 @@ const START_TICKS = 3000;
 
 function emptyCrafting(size: 2 | 3): CraftingState {
   return { size, slots: new Array<ItemStack | null>(size * size).fill(null), result: null };
+}
+
+function isContainerScreen(screen: Screen): boolean {
+  return screen === 'inventory' || screen === 'workbench';
 }
 
 function clamp(value: number, min: number, max: number): number {
@@ -283,9 +295,10 @@ class StubGame implements Game {
     const previous = this.screen;
     if (screen === 'playing') this.input.requestLock();
     else if (previous === 'playing') this.input.releaseLock();
+    if (screen === previous) return;
+    if (isContainerScreen(previous)) this.closeContainer();
     if (screen === 'inventory') this.inventory = { ...this.inventory, crafting: emptyCrafting(2) };
     if (screen === 'workbench') this.inventory = { ...this.inventory, crafting: emptyCrafting(3) };
-    if (screen === previous) return;
     this.screen = screen;
     this.input.clearPresses();
     this.dirty = true;
@@ -328,12 +341,37 @@ class StubGame implements Game {
     this.dirty = true;
   }
 
-  clickSlot(): void {
-    // Phase 1 (C3)
+  private container(): Container {
+    const { slots, crafting, cursor } = this.inventory;
+    return { inventory: slots, crafting: crafting.slots, cursor };
   }
 
-  moveSlot(): void {
-    // Phase 1 (C3)
+  private applyContainer(container: Container): void {
+    const crafting: CraftingState = { ...this.inventory.crafting, slots: container.crafting };
+    this.inventory = { ...this.inventory, slots: container.inventory, cursor: container.cursor, crafting };
+    this.dirty = true;
+  }
+
+  /** Räumt Crafting-Raster und Mauszeiger ins Inventar (beim Schließen von Inventar/Werkbank). */
+  private closeContainer(): void {
+    const { container, overflow } = flushToInventory(this.container(), this.registry);
+    this.applyContainer(container);
+    this.inventory = { ...this.inventory, crafting: emptyCrafting(2) };
+    if (overflow.length > 0) this.events.emit('message', { text: 'Das Inventar ist voll.', kind: 'info' });
+  }
+
+  private containerOpen(): boolean {
+    return isContainerScreen(this.screen);
+  }
+
+  clickSlot(slot: SlotRef, button: ClickButton, shift: boolean): void {
+    if (!this.containerOpen() || slot.area === 'result') return;
+    this.applyContainer(clickContainer(this.container(), slot, button, shift, this.registry));
+  }
+
+  moveSlot(from: SlotRef, to: SlotRef): void {
+    if (!this.containerOpen() || from.area === 'result' || to.area === 'result') return;
+    this.applyContainer(moveContainerSlot(this.container(), from, to, this.registry));
   }
 
   craft(): void {
