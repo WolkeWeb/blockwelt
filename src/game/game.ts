@@ -1,10 +1,10 @@
 /**
- * Spiellogik – PLATZHALTER aus Phase 0 (minimaler GameApi-Stub).
+ * Spiellogik: setzt die `GameApi` aus `core/game.ts` um und verbindet Welt, Physik und Renderer (nur über die Verträge).
  *
- * Kann bereits: eine Welt im Speicher starten, frei fliegen (WASD, Leertaste, Shift, Strg), Maus-Blick mit
- * Pointer-Lock, Hotbar-Auswahl (1–9, Mausrad), Bildschirmwechsel (E, Esc über Pointer-Lock, F3),
- * Tageszeit, anvisierten Block markieren.
- * Noch nicht: Abbauen/Setzen, Inventar-Logik, Crafting, Speichern – das kommt in Phase 1 (C1–C9).
+ * Aufgeteilt in kleine, einzeln getestete Bausteine in diesem Ordner:
+ * `movement` (Sprint, Doppeltippen), `tools` (Abbauzeit, Drops, Haltbarkeit), `building` (Setzen),
+ * `inventory` + `container` (Slots und Klicks), `crafting`, `vitals` (Leben, Luft), `time` (Tag/Nacht),
+ * `spawn` (Spawn-Punkt). Gespeichert wird über `src/save/`.
  */
 import {
   DEFAULT_RENDER_DISTANCE,
@@ -71,6 +71,7 @@ import { Input } from './input';
 import { consumeIngredients, craftResult } from './crafting';
 import { INVENTORY_SIZE, addItem, canMerge, emptySlots, maxStackOf, removeFromSlot } from './inventory';
 import { DoubleTap, SprintTracker, buildMovementInput, type MovementKeys } from './movement';
+import { findSpawn } from './spawn';
 import { dayTimeFromTicks } from './time';
 import { breakSeconds, breakTicks, canHarvest, damageTool, rollDrop, toolWear } from './tools';
 
@@ -114,6 +115,8 @@ const PITCH_LIMIT = Math.PI / 2 - 0.001;
 const DEFAULT_SETTINGS: Settings = { renderDistance: DEFAULT_RENDER_DISTANCE, fov: 70, mouseSensitivity: 1 };
 /** Pause in Ticks zwischen zwei Abbauvorgängen bzw. zwei gesetzten Blöcken bei gehaltener Taste. */
 const ACTION_COOLDOWN_TICKS = 5;
+/** So lange (in Ticks) wartet das Laden höchstens auf die Chunks um den Spawn-Punkt (20 s). */
+const LOADING_TIMEOUT_TICKS = 20 * TICKS_PER_SECOND;
 /** Autosave alle 30 Sekunden. */
 const AUTOSAVE_TICKS = 30 * TICKS_PER_SECOND;
 const START_TICKS = 3000;
@@ -152,7 +155,7 @@ function facingFromYaw(yaw: number): Face {
   return 'east';
 }
 
-class StubGame implements Game {
+class GameImpl implements Game {
   readonly registry: Registry;
   readonly events = createEventBus<GameEvents>();
 
@@ -190,6 +193,8 @@ class StubGame implements Game {
   private stopTracking: (() => void) | null = null;
   private saveChain: Promise<void> = Promise.resolve();
   private ticksSinceSave = 0;
+  /** Läuft, solange der Bildschirm `loading` ist: wartet auf die Chunks, dann wird der Spieler gesetzt. */
+  private loading: { readonly saved: PlayerSave | null; waited: number } | null = null;
   private tickCount = 0;
   private vitals: Vitals = freshVitals();
   private flying = false;
@@ -320,6 +325,7 @@ class StubGame implements Game {
     await this.saveNow();
     this.stopTracking?.();
     this.stopTracking = null;
+    this.loading = null;
     this.deps.renderer.setWorld(null);
     this.world?.dispose();
     this.world = null;
@@ -388,6 +394,7 @@ class StubGame implements Game {
     this.sprint.reset();
     this.deathCause = null;
 
+    this.loading = { saved, waited: 0 };
     if (saved) this.restorePlayer(saved);
     else {
       this.totalTicks = START_TICKS;
@@ -400,6 +407,30 @@ class StubGame implements Game {
         selected: 0,
         crafting: emptyCrafting(2),
       };
+      // Vorläufig über dem Startbereich warten; der echte Spawn-Punkt wird nach dem Laden der Chunks gesucht
+      this.placePlayer({ x: 8.5, y: 90, z: 8.5 });
+    }
+  }
+
+  /** Ob die Chunks um `(x, z)` so weit da sind, dass der Spieler sicher dort stehen kann. */
+  private chunksReady(world: World, x: number, z: number, saved: boolean): boolean {
+    if (!world.isLoaded(x, z)) return false;
+    if (saved) return true;
+    return [-24, 40].every((d) => world.isLoaded(x + d, z) && world.isLoaded(x, z + d));
+  }
+
+  /** Ein Ladeschritt: sobald genug Chunks da sind (oder die Zeit abläuft), Spieler setzen und losspielen. */
+  private advanceLoading(world: World): void {
+    const loading = this.loading;
+    const info = this.worldInfo;
+    if (!loading || !info) return;
+    loading.waited++;
+    const center = loading.saved ? this.body.position : { x: 8, y: 0, z: 8 };
+    const ready = this.chunksReady(world, Math.floor(center.x), Math.floor(center.z), loading.saved !== null);
+    if (!ready && loading.waited < LOADING_TIMEOUT_TICKS) return;
+    this.loading = null;
+    if (!loading.saved) {
+      this.spawn = findSpawn(world, this.registry);
       this.placePlayer(this.spawn);
     }
     this.setScreen('playing');
@@ -609,7 +640,8 @@ class StubGame implements Game {
   }
 
   onCanvasClick(): void {
-    if (this.screen === 'playing' || this.screen === 'paused') this.resume();
+    if (this.screen === 'paused') this.resume();
+    else if (this.screen === 'playing') this.input.requestLock();
   }
 
   private handleKeys(): void {
@@ -623,6 +655,7 @@ class StubGame implements Game {
     }
     if (this.input.consumePress('Escape')) {
       if (this.screen === 'inventory' || this.screen === 'workbench') this.setScreen('playing');
+      else if (this.screen === 'paused') this.resume();
     }
     if (this.screen !== 'playing') return;
     for (let i = 0; i < 9; i++) if (this.input.consumePress(`Digit${i + 1}`)) this.selectHotbarSlot(i);
@@ -639,7 +672,8 @@ class StubGame implements Game {
     if (!world) return;
     if (this.clockRunning()) this.totalTicks++;
     if (++this.ticksSinceSave >= AUTOSAVE_TICKS) void this.saveNow();
-    world.update(this.body.position, this.settings.renderDistance);
+    world.update(this.loading && !this.loading.saved ? { x: 8, y: 0, z: 8 } : this.body.position, this.settings.renderDistance);
+    if (this.screen === 'loading') this.advanceLoading(world);
 
     this.previousPosition = { ...this.body.position };
     if (this.screen === 'playing') {
@@ -857,5 +891,5 @@ class StubGame implements Game {
 
 /** Erzeugt die Spiellogik. */
 export function createGame(deps: GameDeps): Game {
-  return new StubGame(deps);
+  return new GameImpl(deps);
 }

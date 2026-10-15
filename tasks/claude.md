@@ -58,7 +58,7 @@ Nutze die anderen Bereiche ausschließlich über die Verträge in `src/core/`.
 - [x] C7 Spielmodi: Kreativ (fliegen per Doppel-Leertaste, unendliche Blöcke, sofortiges Abbauen)
       und Überleben (Leben, Fallschaden ab 4 Blöcken, Ertrinken, Respawn).
 - [x] C8 Speichern/Laden in IndexedDB: Weltliste, nur veränderte Blöcke/Chunks speichern, Spielerzustand, Autosave alle 30 s.
-- [ ] C9 GameApi vollständig implementieren, sodass die Oberfläche (OpenCode) nur darüber arbeitet.
+- [x] C9 GameApi vollständig implementieren, sodass die Oberfläche (OpenCode) nur darüber arbeitet.
       Spawn-Punkt: sicherer Platz an der Oberfläche über dem Wasser.
 
 ---

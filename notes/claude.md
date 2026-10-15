@@ -73,6 +73,44 @@
   Klon + `npm ci`. Die E2E-Tests liefen in der Linux-Umgebung mit vorinstalliertem Chromium (`PW_CHROMIUM_PATH`);
   unter Windows lädt der erste `npm run e2e` Chromium automatisch herunter.
 
+### Phase 1
+- **Aufbau `src/game/`:** `game.ts` ist nur der Dirigent (Tick, Eingaben, Zustand, Ereignisse). Alle Regeln stecken in reinen,
+  getesteten Modulen: `movement`, `tools`, `building`, `inventory`, `container`, `crafting`, `vitals`, `time`, `spawn`.
+- **C1 Steuerung:** Sprint mit Strg + W oder zweimal schnell W (6 Ticks); endet beim Loslassen von W oder Schleichen.
+  Schleichen-an-der-Kante ist Sache von `stepPlayer` (Vertrag), die Spiellogik gibt nur `sneak` weiter.
+  Maus-Blick wird pro Frame angewendet. `Input` kennt jetzt auch Maustasten (links gehalten = abbauen, rechts = setzen).
+- **C2 Abbauen:** Abbauzeit = Härte × 1,5 s; mit passendem Werkzeug geteilt durch `ToolDef.speed`; ohne nötiges Werkzeug
+  (`requiredToolLevel` nicht erfüllt) Härte × 5 s und kein Drop. Hand auf Stein: 7,5 s. Härte < 0 = nie, Härte 0 und Kreativ = sofort
+  (mit 5 Ticks Pause zwischen zwei Blöcken bei gehaltener Taste). Drops landen direkt im Inventar (es gibt keine Item-Entities);
+  passt etwas nicht mehr hinein, geht es verloren. Setzen: nur an `hit.place`, nur in ersetzbare Zellen, feste Blöcke nicht in die
+  eigene Hitbox; Rechtsklick auf eine Werkbank öffnet sie (Shift + Rechtsklick setzt stattdessen einen Block).
+- **C3 Inventar:** 36 Slots (0–8 Hotbar). Linksklick nimmt/legt/legt zusammen/tauscht, Rechtsklick halbiert bzw. legt eins ab,
+  Shift-Klick verschiebt Hotbar ↔ Hauptinventar bzw. Raster → Inventar. Beim Schließen von Inventar/Werkbank wandern Raster und
+  Mauszeiger ins Inventar (Überlauf geht verloren, mit Meldung). Werkzeuge mit Haltbarkeit stapeln nie.
+- **C4 Crafting:** Rezept-Suche über den belegten Rahmen des Rasters (verschiebbar), waagerecht gespiegelt erlaubt; im Raster darf
+  nichts außer den Zutaten liegen. Klick aufs Ergebnis → Mauszeiger (ein Craft), Shift-Klick/`craft('all')` → so oft wie Platz im Inventar ist.
+- **C5 Werkzeuge:** Verschleiß 1 pro abgebautem Block (Schwert 2, Blöcke mit Härte 0 kosten nichts, Kreativ nichts). Kaputte
+  Werkzeuge verschwinden (`toolBroken`). Fehlendes `durability` heißt neu.
+- **C6 Tag/Nacht:** Zeit läuft nur bei `playing`/`inventory`/`workbench` (nicht in Pause, Menü, Tod). Pro Frame wird zwischen
+  den Ticks weitergerechnet (`totalTicks + alpha`) – dadurch ruckelt der Himmel nicht. Neue Welten starten bei Tick 3000 (Vormittag).
+- **C7 Modi:** Kreativ: Doppel-Leertaste schaltet Fliegen um (kein automatisches Ende bei Landung), unendliche Blöcke, kein Drop,
+  kein Schaden; neue Kreativ-Welten bekommen eine Hotbar mit Grundblöcken. Überleben: Fallschaden ab 4 Blöcken
+  (`ceil(Fall − 3)` halbe Herzen), Luft 300 Ticks, danach alle 20 Ticks 2 Schaden, Heilung 1 halbes Herz pro 4 s, Sturz unter Y = −20
+  tötet (Kreativ: zurück zum Spawn). Tod → Bildschirm `dead`, Inventar bleibt erhalten, Respawn am Spawn-Punkt mit vollem Leben.
+- **C8 Speichern:** `src/save/`, Datenbank `blockwelt` (Stores `worlds`, `players`, `chunks`, `meta`). Pro Chunk werden nur vom Spieler
+  veränderte Zellen gespeichert (Index + Block); beim Laden spielt die Spiellogik sie über `world.setBlock` ein (der Vertrag merkt
+  Änderungen für ungeladene Chunks vor). Autosave alle 30 s, beim Verlassen der Welt und bei `visibilitychange`/`pagehide` (in `main.ts`).
+  Ohne IndexedDB (z. B. privates Fenster) fällt `createSaveStore()` auf einen Speicher im Arbeitsspeicher zurück (mit Warnung).
+  Einstellungen liegen im Store `meta`.
+- **C9 GameApi / Spawn:** Beim Start einer Welt ist der Bildschirm `loading`, bis die Chunks um den Startpunkt da sind (höchstens
+  20 s). Spawn = nächster Platz ab (8, 8), der über dem Meeresspiegel liegt, undurchsichtigen festen Boden hat (keine Blätter/Wasser)
+  und zwei freie Blöcke darüber. `createWorld` in der GameApi gibt die `WorldInfo` sofort zurück, die Welt ist erst nach `worldLoaded` spielbereit.
+- **main.ts:** Solange die Oberfläche kein Menü hat, startet `main.ts` automatisch die Welt „Platzhalter-Welt“ (laden oder neu anlegen,
+  Kreativ, Seed 1). Mit `?menu` in der Adresse unterbleibt das. **Für Phase 2:** diesen Autostart entfernen, sobald das Menü der
+  Oberfläche verdrahtet ist.
+
 ## Wünsche an die Verträge
+- (keine zwingenden) `World.setBlock` könnte mitteilen, ob der Chunk geladen war – dann ließe sich ein Echo-Event beim Einspielen
+  gespeicherter Änderungen vermeiden. Aktuell harmlos (gleiche Werte werden nur erneut vorgemerkt).
 
 ## Ideen
