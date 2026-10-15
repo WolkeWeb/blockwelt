@@ -9,7 +9,7 @@ Oberfläche als HTML/CSS-Overlay über dem Canvas (kein Framework). Pixeliger Lo
       und packt sie in einen Atlas (Format laut `src/core/registry.ts`). Feste Zufallszahlen, damit sie immer gleich aussehen.
       Texturen: Gras oben, Gras Seite, Erde, Stein, Bruchstein, Grundgestein, Sand, Kies, Holzstamm Seite,
       Holzstamm oben, Bretter, Blätter (mit Löchern), Glas, Wasser, Kohleerz, Eisenerz, Werkbank (oben/Seite/vorne), Fackel.
-- [ ] O2 Block-Definitionen in `src/data/blocks.ts` für alle Blöcke aus O1: Härte, Transparenz, Lichtstärke
+- [x] O2 Block-Definitionen in `src/data/blocks.ts` für alle Blöcke aus O1: Härte, Transparenz, Lichtstärke
       (Fackel 14), Drop (Stein → Bruchstein, Gras → Erde, Blätter → nichts), bevorzugtes Werkzeug.
 - [ ] O3 Items in `src/data/items.ts`: Stock, Kohle, Werkzeuge aus Holz und Stein (Spitzhacke, Axt, Schaufel, Schwert)
       mit Haltbarkeit und Abbau-Geschwindigkeit.
