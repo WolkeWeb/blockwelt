@@ -36,7 +36,7 @@ ohne Rückfrage bauen können. Jeder Bereich bekommt eine einfache, funktioniere
 - [x] C0-6 Playwright-Smoketest: Seite lädt, Canvas rendert, keine Console-Errors, Screenshot nach `test-results/`.
 - [x] C0-7 GitHub-Actions-Workflow: Push auf `main` → `npm run check` → Deploy auf GitHub Pages
       (`base` in vite.config passend zum Repo-Namen `blockwelt`).
-- [ ] C0-8 `npm run check` und `npm run e2e` grün. Alles auf `main` committen. Dann STOPPEN.
+- [x] C0-8 `npm run check` und `npm run e2e` grün. Alles auf `main` committen. Dann STOPPEN.
 
 ---
 

@@ -69,6 +69,9 @@
   zusätzlich `dist/` als Pages-Artefakt hochladen) → Job `deploy` (nur Push auf `main`). Pull Requests werden nur geprüft.
   E2E läuft (noch) nicht in CI, wie in der Aufgabe festgelegt. `base: '/blockwelt/'` gilt auch für Dev-Server und Preview,
   damit lokal und online dieselben Pfade gelten → lokal `http://localhost:5173/blockwelt/`.
+- **C0-8 Abschluss:** `npm run check` (7 Testdateien, 23 Tests, Build) und `npm run e2e` grün, geprüft auch mit frischem
+  Klon + `npm ci`. Die E2E-Tests liefen in der Linux-Umgebung mit vorinstalliertem Chromium (`PW_CHROMIUM_PATH`);
+  unter Windows lädt der erste `npm run e2e` Chromium automatisch herunter.
 
 ## Wünsche an die Verträge
 
