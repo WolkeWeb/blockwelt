@@ -46,6 +46,19 @@ describe('Terrain', () => {
 });
 
 describe('Welt', () => {
+  it('aktualisiert gebackenes Nachbarlicht beim Setzen und Entfernen einer Fackel', () => {
+    const world = createWorld({ seed: 1, blocks: BLOCKS, atlas: null });
+    const update = () => { for (let i = 0; i < 12; i++) world.update({ x: 8, y: 70, z: 8 }, 1); };
+    update();
+    world.setBlock(16, 100, 8, BLOCK.STONE); update();
+    world.setBlock(15, 100, 8, BLOCK.TORCH); update();
+    const lightInNeighbor = () => Array.from([...world.getChunkMeshes()].find(m => m.cx === 1 && m.cz === 0)!.opaque.light)
+      .filter((_, i) => i % 2 === 1);
+    expect(Math.max(...lightInNeighbor())).toBeGreaterThan(0);
+    world.setBlock(15, 100, 8, BLOCK.AIR); update();
+    expect(Math.max(...lightInNeighbor())).toBe(0);
+    world.dispose();
+  });
   it('baut bei Änderungen nur betroffene Chunks und Grenznachbarn neu', () => {
     const { world, meshes } = loadedWorld();
     const update = () => { for (let i = 0; i < 10; i++) world.update({ x: 8, y: 70, z: 8 }, 2); };

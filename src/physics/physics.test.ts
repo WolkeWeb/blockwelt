@@ -14,7 +14,7 @@ const blocks: BlockDefSource = {
     >,
 };
 
-describe('Platzhalter-Physik', () => {
+describe('Physik-Vertrag', () => {
   it('fliegt in Blickrichtung (yaw 0 = Norden = −Z)', () => {
     const body: PlayerBody = {
       position: { x: 0, y: 20, z: 0 },

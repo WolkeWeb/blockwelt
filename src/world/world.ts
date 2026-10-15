@@ -87,7 +87,7 @@ class VoxelWorld implements World {
     for (const [key, c] of this.chunks) if (this.distance(c.cx, c.cz) > (radius + 1) ** 2) {
       this.chunks.delete(key); this.neighborsDirty(c.cx, c.cz); this.chunkUnloaded.emit(c.cx, c.cz);
     }
-    const dirty = [...this.chunks.values()].filter(c => c.dirty && !c.meshing)
+    const dirty = [...this.chunks.values()].filter(c => c.dirty && !c.meshing && this.neighborsReady(c))
       .sort((a, b) => this.distance(a.cx, a.cz) - this.distance(b.cx, b.cz));
     // Bounded snapshots; expensive generation/meshing happens in workers.
     for (const c of dirty.slice(0, 2)) {
@@ -113,6 +113,15 @@ class VoxelWorld implements World {
         this.neighborsDirty(cx, cz); this.chunkLoaded.emit(cx, cz);
       });
     }
+  }
+  private neighborsReady(c: Chunk): boolean {
+    // Wait for requested neighbors to avoid repeatedly rebuilding a growing terrain frontier.
+    // Neighbors outside the requested circle are deliberately treated as air.
+    for (let dz = -1; dz <= 1; dz++) for (let dx = -1; dx <= 1; dx++) {
+      if (this.distance(c.cx + dx, c.cz + dz) <= this.center.radius ** 2 &&
+          !this.chunks.has(chunkKey(c.cx + dx, c.cz + dz))) return false;
+    }
+    return true;
   }
   private meshChunk(c: Chunk): void {
     const chunks: ChunkSnapshot[] = [];

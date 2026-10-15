@@ -1,12 +1,9 @@
-/**
- * PLATZHALTER aus Phase 0: Grundszene mit three.js.
- * Zeichnet die Chunk-Meshes der Welt mit Vertex-Farben, einen einfachen Himmel (Hintergrundfarbe + Nebel)
- * und einen Auswahlrahmen. Wird in Phase 1 (X5, X6, X9–X12) ausgebaut.
- */
+/** Atlas-rendered voxel scene, baked light, sorted water and precise chunk culling. */
 import * as THREE from 'three';
 import { sortTransparentFaces } from './transparency';
 import { Sky } from './sky';
 import { BlockSelection } from './selection';
+import { ChunkCuller } from './culling';
 import {
   CHUNK_SIZE,
   DEFAULT_RENDER_DISTANCE,
@@ -27,7 +24,6 @@ import {
 THREE.ColorManagement.enabled = false;
 
 const DAY_SKY = new THREE.Color(0x87b8eb);
-const NIGHT_SKY = new THREE.Color(0x0b1026);
 const WATER_FOG = new THREE.Color(0x1d3f7a);
 
 function toGeometry(buffers: MeshBuffers): THREE.BufferGeometry | null {
@@ -39,6 +35,7 @@ function toGeometry(buffers: MeshBuffers): THREE.BufferGeometry | null {
   geometry.setAttribute('color', new THREE.BufferAttribute(buffers.colors, 3));
   geometry.setAttribute('light', new THREE.BufferAttribute(buffers.light, 2));
   geometry.setIndex(new THREE.BufferAttribute(buffers.indices, 1));
+  geometry.computeBoundingBox();
   geometry.computeBoundingSphere();
   return geometry;
 }
@@ -67,9 +64,9 @@ class BasicRenderer implements Renderer {
   private unsubscribers: Unsubscribe[] = [];
   private renderDistance = DEFAULT_RENDER_DISTANCE;
   private atlasTexture: THREE.CanvasTexture<HTMLCanvasElement | OffscreenCanvas> | null = null;
-  private readonly lastSortPosition = new THREE.Vector3(Infinity, Infinity, Infinity);
+  private readonly culler = new ChunkCuller();
   private readonly sortEye = new THREE.Vector3();
-  private sortDirty = true;
+  private readonly canvasSize = new THREE.Vector2();
   private readonly sunLight = { value: 1 };
 
   constructor(options: RendererOptions) {
@@ -114,6 +111,8 @@ class BasicRenderer implements Renderer {
     this.unsubscribers = [];
     for (const key of [...this.chunks.keys()]) this.removeChunk(key);
     this.world = world;
+    this.selection.setBlock(null);
+    this.renderer?.renderLists.dispose();
     if (!world) return;
     for (const mesh of world.getChunkMeshes()) this.addChunk(mesh);
     this.unsubscribers.push(
@@ -133,11 +132,12 @@ class BasicRenderer implements Renderer {
       const object = new THREE.Mesh(geometry, this.materials[pass]);
       object.renderOrder = pass === 'translucent' ? 1 : 0;
       object.userData.translucent = pass === 'translucent';
+      object.userData.worldBounds = geometry.boundingBox!.clone().translate(group.position);
+      object.frustumCulled = false; // The tighter AABB test is handled by ChunkCuller.
       group.add(object);
     }
     this.chunks.set(key, group);
     this.scene.add(group);
-    this.sortDirty = true;
   }
 
   private removeChunk(key: string): void {
@@ -152,7 +152,7 @@ class BasicRenderer implements Renderer {
     if (!this.renderer || !this.canvas) return;
     const width = this.canvas.clientWidth || 1;
     const height = this.canvas.clientHeight || 1;
-    const size = this.renderer.getSize(new THREE.Vector2());
+    const size = this.renderer.getSize(this.canvasSize);
     if (size.x !== width || size.y !== height) {
       this.renderer.setSize(width, height, false);
       this.camera.aspect = width / height;
@@ -180,15 +180,16 @@ class BasicRenderer implements Renderer {
     }
     this.camera.position.set(camera.position.x, camera.position.y, camera.position.z);
     this.camera.rotation.set(-camera.pitch, camera.yaw, 0);
-    if (this.sortDirty || this.lastSortPosition.distanceToSquared(this.camera.position) > 0.25) {
-      for (const group of this.chunks.values()) for (const child of group.children) {
-        if (child.userData.translucent) {
-          this.sortEye.copy(this.camera.position).sub(group.position);
-          sortTransparentFaces((child as THREE.Mesh).geometry, this.sortEye);
-        }
+    this.culler.update(this.chunks.values(), this.camera);
+    for (const group of this.chunks.values()) if (group.visible) for (const child of group.children) {
+      if (child.userData.translucent && child.visible) {
+        this.sortEye.copy(this.camera.position).sub(group.position);
+        const lastEye = child.userData.sortedEye as THREE.Vector3 | undefined;
+        if (lastEye && lastEye.distanceToSquared(this.sortEye) < 0.25) continue;
+        sortTransparentFaces((child as THREE.Mesh).geometry, this.sortEye);
+        if (lastEye) lastEye.copy(this.sortEye);
+        else child.userData.sortedEye = this.sortEye.clone();
       }
-      this.lastSortPosition.copy(this.camera.position);
-      this.sortDirty = false;
     }
 
     this.renderer.render(this.scene, this.camera);
@@ -221,8 +222,9 @@ class BasicRenderer implements Renderer {
     this.selection.dispose();
     this.renderer?.dispose();
     this.renderer = null;
+    this.canvas = null;
   }
 }
 
-/** Erzeugt den (Platzhalter-)Renderer. Registry und Atlas werden in Phase 0 noch nicht genutzt. */
+/** Creates the renderer from the shared registry/atlas contract. */
 export const createBasicRenderer: CreateRenderer = options => new BasicRenderer(options);

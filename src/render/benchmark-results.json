@@ -1,0 +1,78 @@
+{
+  "timestamp": "2026-10-15T18:49:19.754Z",
+  "browser": "155.0.4283.45",
+  "software": false,
+  "platform": "win32",
+  "cpu": "Intel(R) Core(TM) Ultra 5 125U",
+  "logicalCpus": 14,
+  "viewport": "1280×720 DPR 1",
+  "loadMs": 12869.3263,
+  "stationary": {
+    "loaded": 197,
+    "meshes": 197,
+    "settled": true,
+    "maxUpdateMs": 2.6999999284744263,
+    "stats": {
+      "drawCalls": 127,
+      "triangles": 395902,
+      "chunks": 197
+    },
+    "gpu": "ANGLE (Intel, Intel(R) Graphics (0x00007D45) Direct3D11 vs_5_0 ps_5_0, D3D11)",
+    "expectedChunks": 197,
+    "movement": false,
+    "durationMs": 10007.700000047684,
+    "frames": 601,
+    "fps": 60.05375860558734,
+    "frameP50": 16.69999999999709,
+    "frameP95": 16.80000000000109,
+    "frameMax": 17,
+    "renderP95": 2.399999976158142,
+    "updateP95": 0.2999999523162842,
+    "meanDrawCalls": 127,
+    "meanTriangles": 395902,
+    "meshBytes": 116466552
+  },
+  "moving": {
+    "loaded": 197,
+    "meshes": 197,
+    "settled": true,
+    "maxUpdateMs": 2.6999999284744263,
+    "stats": {
+      "drawCalls": 161,
+      "triangles": 285324,
+      "chunks": 197
+    },
+    "gpu": "ANGLE (Intel, Intel(R) Graphics (0x00007D45) Direct3D11 vs_5_0 ps_5_0, D3D11)",
+    "expectedChunks": 197,
+    "movement": true,
+    "durationMs": 10004.900000095367,
+    "frames": 601,
+    "fps": 60.07056542237016,
+    "frameP50": 16.69999999999709,
+    "frameP95": 16.80000000000291,
+    "frameMax": 17,
+    "renderP95": 4.600000023841858,
+    "updateP95": 0.2999999523162842,
+    "meanDrawCalls": 146.55074875207987,
+    "meanTriangles": 352562.17304492515,
+    "meshBytes": 116466552
+  },
+  "loadedHeap": {
+    "usedSize": 10654880,
+    "totalSize": 11665408,
+    "embedderHeapUsedSize": 973736,
+    "backingStorageSize": 135947552
+  },
+  "afterClear": {
+    "drawCalls": 161,
+    "triangles": 285324,
+    "chunks": 0
+  },
+  "clearedHeap": {
+    "usedSize": 9082864,
+    "totalSize": 10878976,
+    "embedderHeapUsedSize": 801416,
+    "backingStorageSize": 6617512
+  },
+  "errors": []
+}
