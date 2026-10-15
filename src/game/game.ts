@@ -54,7 +54,8 @@ import {
   type Container,
 } from './container';
 import { Input } from './input';
-import { INVENTORY_SIZE, addItem, removeFromSlot } from './inventory';
+import { consumeIngredients, craftResult } from './crafting';
+import { INVENTORY_SIZE, addItem, canMerge, maxStackOf, removeFromSlot } from './inventory';
 import { SprintTracker, buildMovementInput, type MovementKeys } from './movement';
 import { dayTimeFromTicks } from './time';
 import { breakSeconds, breakTicks, rollDrop } from './tools';
@@ -347,7 +348,12 @@ class StubGame implements Game {
   }
 
   private applyContainer(container: Container): void {
-    const crafting: CraftingState = { ...this.inventory.crafting, slots: container.crafting };
+    const { size } = this.inventory.crafting;
+    const crafting: CraftingState = {
+      size,
+      slots: container.crafting,
+      result: craftResult(this.registry.recipes, container.crafting, size),
+    };
     this.inventory = { ...this.inventory, slots: container.inventory, cursor: container.cursor, crafting };
     this.dirty = true;
   }
@@ -365,7 +371,11 @@ class StubGame implements Game {
   }
 
   clickSlot(slot: SlotRef, button: ClickButton, shift: boolean): void {
-    if (!this.containerOpen() || slot.area === 'result') return;
+    if (!this.containerOpen()) return;
+    if (slot.area === 'result') {
+      this.craftFromResult(shift ? 'all' : 'cursor');
+      return;
+    }
     this.applyContainer(clickContainer(this.container(), slot, button, shift, this.registry));
   }
 
@@ -374,8 +384,39 @@ class StubGame implements Game {
     this.applyContainer(moveContainerSlot(this.container(), from, to, this.registry));
   }
 
-  craft(): void {
-    // Phase 1 (C4)
+  craft(mode: 'one' | 'all'): void {
+    if (!this.containerOpen()) return;
+    this.craftFromResult(mode === 'all' ? 'all' : 'one');
+  }
+
+  /**
+   * Craftet mit dem aktuellen Raster.
+   * - `cursor`: ein Stück, Ergebnis an den Mauszeiger (Klick auf den Ergebnis-Slot).
+   * - `one` / `all`: einmal bzw. so oft wie möglich, Ergebnis ins Inventar (bricht ab, wenn kein Platz mehr ist).
+   */
+  private craftFromResult(mode: 'cursor' | 'one' | 'all'): void {
+    const size = this.inventory.crafting.size;
+    const limit = mode === 'all' ? 64 * 9 : 1;
+    for (let n = 0; n < limit; n++) {
+      const container = this.container();
+      const result = craftResult(this.registry.recipes, container.crafting, size);
+      if (!result) return;
+      let next: Container;
+      if (mode === 'cursor') {
+        const cursor = container.cursor;
+        const max = maxStackOf(this.registry, result.item);
+        if (cursor === null) next = { ...container, cursor: result };
+        else if (canMerge(cursor, result) && cursor.count + result.count <= max) {
+          next = { ...container, cursor: { ...cursor, count: cursor.count + result.count } };
+        } else return;
+      } else {
+        const added = addItem(container.inventory, this.registry, result);
+        if (added.remainder) return;
+        next = { ...container, inventory: added.slots };
+      }
+      this.applyContainer({ ...next, crafting: consumeIngredients(container.crafting) });
+      this.events.emit('crafted', { stack: result });
+    }
   }
 
   // ----- Schleife -----
@@ -468,6 +509,10 @@ class StubGame implements Game {
     if (this.input.isButtonDown(0) && hit) this.updateBreaking(world, hit);
     else this.resetBreaking();
 
+    if (placeClick && hit && hit.blockId === BLOCK.CRAFTING_TABLE && !this.input.isDown('ShiftLeft')) {
+      this.setScreen('workbench');
+      return;
+    }
     const placeWanted = placeClick || (this.input.isButtonDown(2) && this.actionCooldown === 0);
     if (placeWanted && hit) this.placeBlock(world, hit);
   }

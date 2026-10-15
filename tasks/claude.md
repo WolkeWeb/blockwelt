@@ -51,7 +51,7 @@ Nutze die anderen Bereiche ausschließlich über die Verträge in `src/core/`.
       Drop landet im Inventar. Blöcke setzen: nicht in die eigene Hitbox, nur an die getroffene Fläche.
 - [x] C3 Inventar-Modell: 27 Slots + 9 Hotbar, Stapel bis 64 (Werkzeuge 1), Hotbar-Auswahl per Mausrad und 1–9,
       Slots tauschen/teilen/zusammenlegen, Rechtsklick-Verhalten wie gewohnt. Unit-Tests.
-- [ ] C4 Crafting-Logik: 2×2 und 3×3, geformte und formlose Rezepte, Rezepte verschiebbar im Raster,
+- [x] C4 Crafting-Logik: 2×2 und 3×3, geformte und formlose Rezepte, Rezepte verschiebbar im Raster,
       gespiegelte Rezepte erlaubt, liest Rezepte aus der Registry. Unit-Tests.
 - [ ] C5 Werkzeuge: Haltbarkeit, Abbau-Bonus je Material, manche Blöcke droppen nur mit passendem Werkzeug.
 - [ ] C6 Tag/Nacht-Zyklus: Tageszeit als Zustand, Sonnenwinkel und Himmelslicht für den Renderer bereitstellen.
