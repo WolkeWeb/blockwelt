@@ -56,6 +56,23 @@ describe('Terrain', () => {
 });
 
 describe('Welt', () => {
+  it('lädt zuerst den Spielerchunk, entlädt entfernte Daten und erhält Änderungen', () => {
+    const world = createWorld({ seed: 1, blocks: BLOCKS, atlas: null });
+    const loaded: string[] = [], unloaded: string[] = [];
+    world.onChunkLoaded((x, z) => loaded.push(`${x},${z}`));
+    world.onChunkUnloaded((x, z) => unloaded.push(`${x},${z}`));
+    world.update({ x: -1, y: 70, z: -1 }, 1);
+    expect(loaded[0]).toBe('-1,-1');
+    world.setBlock(-1, 120, -1, BLOCK.GLASS);
+    world.update({ x: 1000, y: 70, z: 1000 }, 1);
+    expect(world.isLoaded(-1, -1)).toBe(false);
+    expect(unloaded).toContain('-1,-1');
+    world.update({ x: -1, y: 70, z: -1 }, 1);
+    expect(world.getBlock(-1, 120, -1)).toBe(BLOCK.GLASS);
+    world.dispose();
+    world.update({ x: 0, y: 0, z: 0 }, 2);
+    expect([...world.getChunkMeshes()]).toEqual([]);
+  });
   it('meldet Blockänderungen und baut Meshes', () => {
     const { world, meshes } = loadedWorld();
     expect(world.isLoaded(8, 8)).toBe(true);

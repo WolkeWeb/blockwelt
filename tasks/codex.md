@@ -9,7 +9,7 @@ Die Verträge in `src/core/` sind fest. Performance ist wichtig – miss sie, st
       Schichten: Gras → 3–4 Erde → Stein, unten eine unzerstörbare Grundschicht. Unit-Tests (gleicher Seed = gleiche Welt).
 - [x] X2 Bäume: Stamm + Blätterkrone, zufällig aber deterministisch verteilt, auch über Chunk-Grenzen hinweg korrekt.
 - [x] X3 Höhlen (3D-Noise, „Spaghetti“-Gänge) und Erzadern (Kohle häufig und hoch, Eisen seltener und tiefer).
-- [ ] X4 Chunk-Verwaltung: Chunks rund um den Spieler laden/entladen je nach Sichtweite, näheste zuerst.
+- [x] X4 Chunk-Verwaltung: Chunks rund um den Spieler laden/entladen je nach Sichtweite, näheste zuerst.
       Generierung und Meshing in Web Workern, damit das Spiel nicht ruckelt.
 - [ ] X5 Meshing: nur sichtbare Flächen, Texturen aus dem Atlas (Format laut Vertrag; solange kein Atlas da ist, Farben),
       Ambient Occlusion pro Ecke. `setBlock` baut nur betroffene Chunks neu, inkl. Nachbarn an der Grenze.
@@ -26,6 +26,7 @@ Die Verträge in `src/core/` sind fest. Performance ist wichtig – miss sie, st
 - [ ] X11 Auswahlrahmen um den anvisierten Block und Abbau-Risse (10 Stufen) als Overlay.
 - [ ] X12 Performance: Frustum-Culling, Speicher entladener Chunks freigeben, FPS bei Sichtweite 8 messen
       (Playwright oder Dev-Overlay). Engpässe beheben. Messwerte in `notes/codex.md` eintragen.
+
 
 
 

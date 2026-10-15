@@ -1,32 +1,10 @@
-/**
- * PLATZHALTER aus Phase 0: flache Welt, synchron im Hauptthread erzeugt.
- * Schichten: Y 0 Stein … Y 59 Stein, Y 60–62 Erde, Y 63 Gras. Darüber Luft.
- * Wird in Phase 1 (X1–X5) durch die echte Welt ersetzt.
- */
-import {
-  BLOCK,
-  CHUNK_HEIGHT,
-  CHUNK_SIZE,
-  chunkKey,
-  toChunkCoord,
-  type BlockChange,
-  type BlockDef,
-  type BlockId,
-  type ChunkMesh,
-  type CreateWorld,
-  type Unsubscribe,
-  type Vec3,
-  type World,
-  type WorldOptions,
+﻿import {
+  BLOCK, CHUNK_HEIGHT, CHUNK_SIZE, chunkKey, toChunkCoord,
+  type BlockChange, type BlockId, type ChunkMesh, type CreateWorld, type Unsubscribe,
+  type Vec3, type World, type WorldOptions,
 } from '../core';
-import { buildChunkMesh } from './mesher';
-import { TerrainGenerator } from './terrain';
-
-/** Höhe der Grasoberfläche der flachen Welt. */
-export const FLAT_SURFACE_Y = 63;
-
-/** Wie viele Chunks pro `update`-Aufruf höchstens erzeugt bzw. gemesht werden. */
-const CHUNKS_PER_UPDATE = 4;
+import { blockIndex } from './terrain';
+import { EngineWorkers, HALO_SIZE, haloIndex } from './workers';
 
 interface Chunk {
   readonly cx: number;
@@ -35,203 +13,126 @@ interface Chunk {
   mesh: ChunkMesh | null;
   dirty: boolean;
   revision: number;
+  meshing: boolean;
 }
-
-function index(lx: number, y: number, lz: number): number {
-  return (y * CHUNK_SIZE + lz) * CHUNK_SIZE + lx;
-}
-
-function generateFlat(): Uint16Array {
-  const data = new Uint16Array(CHUNK_SIZE * CHUNK_SIZE * CHUNK_HEIGHT);
-  for (let y = 0; y <= FLAT_SURFACE_Y; y++) {
-    const id = y === FLAT_SURFACE_Y ? BLOCK.GRASS : y >= FLAT_SURFACE_Y - 3 ? BLOCK.DIRT : BLOCK.STONE;
-    data.fill(id, index(0, y, 0), index(0, y + 1, 0));
-  }
-  return data;
-}
-
 class Listeners<A extends unknown[]> {
   private readonly set = new Set<(...args: A) => void>();
-  add(listener: (...args: A) => void): Unsubscribe {
-    this.set.add(listener);
-    return () => this.set.delete(listener);
-  }
-  emit(...args: A): void {
-    for (const listener of [...this.set]) listener(...args);
-  }
-  clear(): void {
-    this.set.clear();
-  }
+  add(listener: (...args: A) => void): Unsubscribe { this.set.add(listener); return () => this.set.delete(listener); }
+  emit(...args: A): void { for (const listener of [...this.set]) listener(...args); }
+  clear(): void { this.set.clear(); }
 }
 
-class FlatWorld implements World {
-  private readonly terrain: TerrainGenerator;
+class VoxelWorld implements World {
   readonly seed: number;
-  private readonly blocks: readonly BlockDef[];
+  private readonly workers: EngineWorkers;
   private readonly chunks = new Map<string, Chunk>();
-  private readonly pending = new Map<string, Map<number, BlockId>>();
+  /** Sparse edit journal survives unloading; generated data and meshes do not. */
+  private readonly edits = new Map<string, Map<number, BlockId>>();
+  private readonly generating = new Set<string>();
   private readonly blockChanged = new Listeners<[BlockChange]>();
   private readonly chunkLoaded = new Listeners<[number, number]>();
   private readonly chunkMesh = new Listeners<[ChunkMesh]>();
   private readonly chunkUnloaded = new Listeners<[number, number]>();
+  private center = { x: 0, z: 0, radius: 0 };
+  private disposed = false;
 
-  constructor(options: WorldOptions) {
-    this.seed = options.seed;
-    this.terrain = new TerrainGenerator(this.seed);
-    this.blocks = options.blocks;
-  }
-
-  private chunkAt(x: number, z: number): Chunk | undefined {
-    return this.chunks.get(chunkKey(toChunkCoord(x), toChunkCoord(z)));
-  }
-
+  constructor(options: WorldOptions) { this.seed = options.seed; this.workers = new EngineWorkers(options); }
+  private chunkAt(x: number, z: number): Chunk | undefined { return this.chunks.get(chunkKey(toChunkCoord(x), toChunkCoord(z))); }
   getBlock(x: number, y: number, z: number): BlockId {
-    x = Math.floor(x);
-    y = Math.floor(y);
-    z = Math.floor(z);
+    x = Math.floor(x); y = Math.floor(y); z = Math.floor(z);
     if (y < 0) return BLOCK.BEDROCK;
     if (y >= CHUNK_HEIGHT) return BLOCK.AIR;
-    const chunk = this.chunkAt(x, z);
-    if (!chunk) return BLOCK.AIR;
-    return chunk.data[index(x - chunk.cx * CHUNK_SIZE, y, z - chunk.cz * CHUNK_SIZE)];
+    const c = this.chunkAt(x, z);
+    return c ? c.data[blockIndex(x - c.cx * CHUNK_SIZE, y, z - c.cz * CHUNK_SIZE)] : BLOCK.AIR;
   }
-
   setBlock(x: number, y: number, z: number, id: BlockId): boolean {
-    x = Math.floor(x);
-    y = Math.floor(y);
-    z = Math.floor(z);
-    if (y < 0 || y >= CHUNK_HEIGHT) return false;
-    const cx = toChunkCoord(x);
-    const cz = toChunkCoord(z);
-    const lx = x - cx * CHUNK_SIZE;
-    const lz = z - cz * CHUNK_SIZE;
-    const chunk = this.chunks.get(chunkKey(cx, cz));
-    if (!chunk) {
-      const key = chunkKey(cx, cz);
-      let changes = this.pending.get(key);
-      if (!changes) this.pending.set(key, (changes = new Map()));
-      changes.set(index(lx, y, lz), id);
-      return true;
-    }
-    const i = index(lx, y, lz);
-    const previous = chunk.data[i];
-    if (previous === id) return true;
-    chunk.data[i] = id;
-    chunk.dirty = true;
-    // Nachbarn an der Grenze neu bauen
-    if (lx === 0) this.markDirty(cx - 1, cz);
-    if (lx === CHUNK_SIZE - 1) this.markDirty(cx + 1, cz);
-    if (lz === 0) this.markDirty(cx, cz - 1);
-    if (lz === CHUNK_SIZE - 1) this.markDirty(cx, cz + 1);
+    x = Math.floor(x); y = Math.floor(y); z = Math.floor(z);
+    if (this.disposed || y < 0 || y >= CHUNK_HEIGHT) return false;
+    const cx = toChunkCoord(x), cz = toChunkCoord(z), key = chunkKey(cx, cz);
+    const lx = x - cx * CHUNK_SIZE, lz = z - cz * CHUNK_SIZE, i = blockIndex(lx, y, lz);
+    const c = this.chunks.get(key);
+    if (c?.data[i] === id) return true;
+    let changes = this.edits.get(key);
+    if (!changes) this.edits.set(key, changes = new Map());
+    changes.set(i, id);
+    if (!c) return true;
+    const previous = c.data[i]; c.data[i] = id;
+    this.markDirty(cx, cz);
+    // AO samples diagonal chunks as well as face neighbors.
+    for (const dx of [0, ...(lx === 0 ? [-1] : lx === 15 ? [1] : [])])
+      for (const dz of [0, ...(lz === 0 ? [-1] : lz === 15 ? [1] : [])]) this.markDirty(cx + dx, cz + dz);
     this.blockChanged.emit({ x, y, z, previous, current: id });
     return true;
   }
-
   private markDirty(cx: number, cz: number): void {
-    const chunk = this.chunks.get(chunkKey(cx, cz));
-    if (chunk) chunk.dirty = true;
+    const c = this.chunks.get(chunkKey(cx, cz));
+    if (c) { c.dirty = true; c.revision++; }
   }
-
-  isLoaded(x: number, z: number): boolean {
-    return this.chunkAt(Math.floor(x), Math.floor(z)) !== undefined;
+  private neighborsDirty(cx: number, cz: number): void {
+    for (let z = -1; z <= 1; z++) for (let x = -1; x <= 1; x++) this.markDirty(cx + x, cz + z);
   }
-
+  isLoaded(x: number, z: number): boolean { return !!this.chunkAt(Math.floor(x), Math.floor(z)); }
   getSurfaceHeight(x: number, z: number): number {
     if (!this.isLoaded(x, z)) return -1;
-    for (let y = CHUNK_HEIGHT - 1; y >= 0; y--) {
-      if (this.getBlock(x, y, z) !== BLOCK.AIR) return y;
-    }
+    for (let y = CHUNK_HEIGHT - 1; y >= 0; y--) if (this.getBlock(x, y, z) !== BLOCK.AIR) return y;
     return -1;
   }
-
-  update(playerPosition: Vec3, renderDistance: number): void {
-    const pcx = toChunkCoord(playerPosition.x);
-    const pcz = toChunkCoord(playerPosition.z);
-
-    // Entladen
-    for (const [key, chunk] of this.chunks) {
-      const dx = chunk.cx - pcx;
-      const dz = chunk.cz - pcz;
-      if (dx * dx + dz * dz > (renderDistance + 1) * (renderDistance + 1)) {
-        this.chunks.delete(key);
-        this.chunkUnloaded.emit(chunk.cx, chunk.cz);
-      }
+  private distance(cx: number, cz: number): number { return (cx - this.center.x) ** 2 + (cz - this.center.z) ** 2; }
+  update(position: Vec3, renderDistance: number): void {
+    if (this.disposed) return;
+    const radius = Math.max(0, Math.min(16, Math.floor(renderDistance)));
+    this.center = { x: toChunkCoord(position.x), z: toChunkCoord(position.z), radius };
+    for (const [key, c] of this.chunks) if (this.distance(c.cx, c.cz) > (radius + 1) ** 2) {
+      this.chunks.delete(key); this.neighborsDirty(c.cx, c.cz); this.chunkUnloaded.emit(c.cx, c.cz);
     }
-
-    // Laden: näheste zuerst
+    const dirty = [...this.chunks.values()].filter(c => c.dirty && !c.meshing)
+      .sort((a, b) => this.distance(a.cx, a.cz) - this.distance(b.cx, b.cz));
+    // Bounded snapshots; expensive generation/meshing happens in workers.
+    for (const c of dirty.slice(0, 2)) {
+      if (!this.workers.available) break;
+      this.meshChunk(c);
+    }
     const missing: [number, number, number][] = [];
-    for (let dz = -renderDistance; dz <= renderDistance; dz++) {
-      for (let dx = -renderDistance; dx <= renderDistance; dx++) {
-        const d = dx * dx + dz * dz;
-        if (d > renderDistance * renderDistance) continue;
-        if (!this.chunks.has(chunkKey(pcx + dx, pcz + dz))) missing.push([d, pcx + dx, pcz + dz]);
-      }
+    for (let dz = -radius; dz <= radius; dz++) for (let dx = -radius; dx <= radius; dx++) {
+      const cx = this.center.x + dx, cz = this.center.z + dz, d = dx * dx + dz * dz, key = chunkKey(cx, cz);
+      if (d <= radius * radius && !this.chunks.has(key) && !this.generating.has(key)) missing.push([d, cx, cz]);
     }
     missing.sort((a, b) => a[0] - b[0]);
-    for (const [, cx, cz] of missing.slice(0, CHUNKS_PER_UPDATE)) this.loadChunk(cx, cz);
-
-    // Meshen: näheste zuerst, Nachbarn müssen geladen sein (sonst fehlen Flächen an der Grenze)
-    const dirty = [...this.chunks.values()]
-      .filter((c) => c.dirty && this.neighborsLoaded(c.cx, c.cz))
-      .sort((a, b) => (a.cx - pcx) ** 2 + (a.cz - pcz) ** 2 - ((b.cx - pcx) ** 2 + (b.cz - pcz) ** 2));
-    for (const chunk of dirty.slice(0, CHUNKS_PER_UPDATE)) {
-      chunk.dirty = false;
-      chunk.revision++;
-      chunk.mesh = buildChunkMesh(chunk.cx, chunk.cz, chunk.revision, this.blocks, (x, y, z) =>
-        this.getBlock(x, y, z),
-      );
-      this.chunkMesh.emit(chunk.mesh);
+    for (const [, cx, cz] of missing.slice(0, 2)) {
+      if (!this.workers.available) break;
+      const key = chunkKey(cx, cz);
+      this.generating.add(key);
+      this.workers.run({ kind: 'generate', cx, cz }, result => {
+        this.generating.delete(key);
+        if (!result || this.disposed || this.distance(cx, cz) > (this.center.radius + 1) ** 2) return;
+        const data = result as Uint16Array;
+        for (const [i, id] of this.edits.get(key) ?? []) data[i] = id;
+        this.chunks.set(key, { cx, cz, data, mesh: null, dirty: true, revision: 1, meshing: false });
+        this.neighborsDirty(cx, cz); this.chunkLoaded.emit(cx, cz);
+      });
     }
   }
-
-  private neighborsLoaded(cx: number, cz: number): boolean {
-    return (
-      this.chunks.has(chunkKey(cx + 1, cz)) &&
-      this.chunks.has(chunkKey(cx - 1, cz)) &&
-      this.chunks.has(chunkKey(cx, cz + 1)) &&
-      this.chunks.has(chunkKey(cx, cz - 1))
-    );
+  private meshChunk(c: Chunk): void {
+    const halo = new Uint16Array(HALO_SIZE * HALO_SIZE * CHUNK_HEIGHT);
+    for (let y = 0; y < CHUNK_HEIGHT; y++) for (let z = -1; z <= 16; z++) for (let x = -1; x <= 16; x++)
+      halo[haloIndex(x, y, z)] = this.getBlock(c.cx * 16 + x, y, c.cz * 16 + z);
+    const revision = c.revision;
+    c.dirty = false; c.meshing = true;
+    this.workers.run({ kind: 'mesh', cx: c.cx, cz: c.cz, revision, halo }, result => {
+      c.meshing = false;
+      if (!result) { c.dirty = true; return; }
+      if (this.disposed || this.chunks.get(chunkKey(c.cx, c.cz)) !== c || revision !== c.revision) return;
+      c.mesh = result as ChunkMesh; this.chunkMesh.emit(c.mesh);
+    });
   }
-
-  private loadChunk(cx: number, cz: number): void {
-    const key = chunkKey(cx, cz);
-    const chunk: Chunk = { cx, cz, data: this.terrain.generate(cx, cz), mesh: null, dirty: true, revision: 0 };
-    const changes = this.pending.get(key);
-    if (changes) {
-      for (const [i, id] of changes) chunk.data[i] = id;
-      this.pending.delete(key);
-    }
-    this.chunks.set(key, chunk);
-    this.markDirty(cx + 1, cz);
-    this.markDirty(cx - 1, cz);
-    this.markDirty(cx, cz + 1);
-    this.markDirty(cx, cz - 1);
-    this.chunkLoaded.emit(cx, cz);
-  }
-
-  onBlockChanged(listener: (change: BlockChange) => void): Unsubscribe {
-    return this.blockChanged.add(listener);
-  }
-  onChunkLoaded(listener: (cx: number, cz: number) => void): Unsubscribe {
-    return this.chunkLoaded.add(listener);
-  }
-  onChunkMesh(listener: (mesh: ChunkMesh) => void): Unsubscribe {
-    return this.chunkMesh.add(listener);
-  }
-  onChunkUnloaded(listener: (cx: number, cz: number) => void): Unsubscribe {
-    return this.chunkUnloaded.add(listener);
-  }
-
-  *getChunkMeshes(): Iterable<ChunkMesh> {
-    for (const chunk of this.chunks.values()) if (chunk.mesh) yield chunk.mesh;
-  }
-
+  onBlockChanged(listener: (change: BlockChange) => void): Unsubscribe { return this.blockChanged.add(listener); }
+  onChunkLoaded(listener: (cx: number, cz: number) => void): Unsubscribe { return this.chunkLoaded.add(listener); }
+  onChunkMesh(listener: (mesh: ChunkMesh) => void): Unsubscribe { return this.chunkMesh.add(listener); }
+  onChunkUnloaded(listener: (cx: number, cz: number) => void): Unsubscribe { return this.chunkUnloaded.add(listener); }
+  *getChunkMeshes(): Iterable<ChunkMesh> { for (const c of this.chunks.values()) if (c.mesh) yield c.mesh; }
   dispose(): void {
-    this.chunks.clear();
-    this.pending.clear();
+    this.disposed = true; this.workers.dispose(); this.chunks.clear(); this.edits.clear(); this.generating.clear();
     for (const l of [this.blockChanged, this.chunkLoaded, this.chunkMesh, this.chunkUnloaded]) l.clear();
   }
 }
-
-/** Erzeugt die (Platzhalter-)Welt. */
-export const createFlatWorld: CreateWorld = (options) => new FlatWorld(options);
+export const createVoxelWorld: CreateWorld = options => new VoxelWorld(options);
