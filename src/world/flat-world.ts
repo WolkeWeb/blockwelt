@@ -4,7 +4,7 @@
   type Vec3, type World, type WorldOptions,
 } from '../core';
 import { blockIndex } from './terrain';
-import { EngineWorkers, HALO_SIZE, haloIndex } from './workers';
+import { EngineWorkers, type ChunkSnapshot } from './workers';
 
 interface Chunk {
   readonly cx: number;
@@ -36,7 +36,7 @@ class VoxelWorld implements World {
   private center = { x: 0, z: 0, radius: 0 };
   private disposed = false;
 
-  constructor(options: WorldOptions) { this.seed = options.seed; this.workers = new EngineWorkers(options); }
+  constructor(private readonly options: WorldOptions) { this.seed = options.seed; this.workers = new EngineWorkers(options); }
   private chunkAt(x: number, z: number): Chunk | undefined { return this.chunks.get(chunkKey(toChunkCoord(x), toChunkCoord(z))); }
   getBlock(x: number, y: number, z: number): BlockId {
     x = Math.floor(x); y = Math.floor(y); z = Math.floor(z);
@@ -61,6 +61,8 @@ class VoxelWorld implements World {
     // AO samples diagonal chunks as well as face neighbors.
     for (const dx of [0, ...(lx === 0 ? [-1] : lx === 15 ? [1] : [])])
       for (const dz of [0, ...(lz === 0 ? [-1] : lz === 15 ? [1] : [])]) this.markDirty(cx + dx, cz + dz);
+    const oldDef = this.options.blocks[previous], newDef = this.options.blocks[id];
+    if (oldDef?.lightLevel !== newDef?.lightLevel || oldDef?.lightOpacity !== newDef?.lightOpacity) this.neighborsDirty(cx, cz);
     this.blockChanged.emit({ x, y, z, previous, current: id });
     return true;
   }
@@ -113,12 +115,14 @@ class VoxelWorld implements World {
     }
   }
   private meshChunk(c: Chunk): void {
-    const halo = new Uint16Array(HALO_SIZE * HALO_SIZE * CHUNK_HEIGHT);
-    for (let y = 0; y < CHUNK_HEIGHT; y++) for (let z = -1; z <= 16; z++) for (let x = -1; x <= 16; x++)
-      halo[haloIndex(x, y, z)] = this.getBlock(c.cx * 16 + x, y, c.cz * 16 + z);
+    const chunks: ChunkSnapshot[] = [];
+    for (let dz = -1; dz <= 1; dz++) for (let dx = -1; dx <= 1; dx++) {
+      const neighbor = this.chunks.get(chunkKey(c.cx + dx, c.cz + dz));
+      if (neighbor) chunks.push({ cx: neighbor.cx, cz: neighbor.cz, data: neighbor.data.slice() });
+    }
     const revision = c.revision;
     c.dirty = false; c.meshing = true;
-    this.workers.run({ kind: 'mesh', cx: c.cx, cz: c.cz, revision, halo }, result => {
+    this.workers.run({ kind: 'mesh', cx: c.cx, cz: c.cz, revision, chunks }, result => {
       c.meshing = false;
       if (!result) { c.dirty = true; return; }
       if (this.disposed || this.chunks.get(chunkKey(c.cx, c.cz)) !== c || revision !== c.revision) return;

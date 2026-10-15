@@ -37,7 +37,7 @@ class BufferBuilder {
   light: number[] = [];
   indices: number[] = [];
 
-  addFace(x: number, y: number, z: number, face: Face, color: number, ao: number[], rect?: UVRect, top = 1): void {
+  addFace(x: number, y: number, z: number, face: Face, color: number, ao: number[], rect?: UVRect, top = 1, light: readonly [number, number] = [1, 0]): void {
     const base = this.positions.length / 3;
     const n = FACE_NORMALS[face];
     const shade = FACE_SHADE[face];
@@ -50,7 +50,7 @@ class BufferBuilder {
       this.normals.push(n.x, n.y, n.z);
       this.uvs.push(uv[i * 2], uv[i * 2 + 1]);
       this.colors.push(r * shade * ao[i], g * shade * ao[i], b * shade * ao[i]);
-      this.light.push(1, 0);
+      this.light.push(...light);
     });
     if (ao[0] + ao[2] > ao[1] + ao[3]) this.indices.push(base, base + 1, base + 3, base + 1, base + 2, base + 3);
     else this.indices.push(base, base + 1, base + 2, base, base + 2, base + 3);
@@ -79,6 +79,7 @@ export function buildChunkMesh(
   blocks: readonly BlockDef[],
   getBlock: BlockLookup,
   atlas: AtlasLayout | null = null,
+  getLight: (x: number, y: number, z: number) => readonly [number, number] = () => [1, 0],
 ): ChunkMesh {
   const opaque = new BufferBuilder();
   const cutout = new BufferBuilder();
@@ -116,7 +117,9 @@ export function buildChunkMesh(
             });
             const rect = block.textures ? atlas?.regions[block.textures[face]] : undefined;
             const top = block.shape === 'liquid' && def(getBlock(px, y + 1, pz))?.shape !== 'liquid' ? 14 / 16 : 1;
-            target.addFace(lx, y, lz, face, rect ? 0xffffff : block.color, ao, rect, top);
+            const light = getLight(px + n.x, y + n.y, pz + n.z);
+            target.addFace(lx, y, lz, face, rect ? 0xffffff : block.color, ao, rect, top,
+              [light[0], Math.max(light[1], block.lightLevel / 15)]);
           }
         }
       }

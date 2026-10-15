@@ -1,21 +1,30 @@
 ﻿import { BLOCK, CHUNK_HEIGHT, CHUNK_SIZE, type BlockId, type ChunkMesh, type WorldOptions } from '../core';
 import { buildChunkMesh } from './mesher';
 import { TerrainGenerator } from './terrain';
+import { blockIndex } from './terrain';
+import { LightField } from './lighting';
 
-export const HALO_SIZE = CHUNK_SIZE + 2;
-export const haloIndex = (x: number, y: number, z: number): number => (y * HALO_SIZE + z + 1) * HALO_SIZE + x + 1;
+export interface ChunkSnapshot { cx: number; cz: number; data: Uint16Array }
 export type EngineJob =
   | { kind: 'generate'; cx: number; cz: number }
-  | { kind: 'mesh'; cx: number; cz: number; revision: number; halo: Uint16Array };
+  | { kind: 'mesh'; cx: number; cz: number; revision: number; chunks: ChunkSnapshot[] };
 export type EngineResult = Uint16Array | ChunkMesh;
 
 export function executeJob(job: EngineJob, options: WorldOptions, terrain: TerrainGenerator): EngineResult {
   if (job.kind === 'generate') return terrain.generate(job.cx, job.cz);
-  return buildChunkMesh(job.cx, job.cz, job.revision, options.blocks, (x, y, z): BlockId => {
+  const chunks: (Uint16Array | undefined)[] = Array(9);
+  for (const c of job.chunks) chunks[(c.cz - job.cz + 1) * 3 + c.cx - job.cx + 1] = c.data;
+  const getBlock = (x: number, y: number, z: number): BlockId => {
     if (y < 0) return BLOCK.BEDROCK;
     if (y >= CHUNK_HEIGHT) return BLOCK.AIR;
-    return job.halo[haloIndex(x - job.cx * CHUNK_SIZE, y, z - job.cz * CHUNK_SIZE)];
-  }, options.atlas);
+    const cx = Math.floor(x / 16), cz = Math.floor(z / 16);
+    const dx = cx - job.cx + 1, dz = cz - job.cz + 1;
+    if (dx < 0 || dx > 2 || dz < 0 || dz > 2) return BLOCK.AIR;
+    return chunks[dz * 3 + dx]?.[blockIndex(x - cx * 16, y, z - cz * 16)] ?? BLOCK.AIR;
+  };
+  const lighting = new LightField((job.cx - 1) * 16, (job.cz - 1) * 16, 48, options.blocks, getBlock);
+  return buildChunkMesh(job.cx, job.cz, job.revision, options.blocks, getBlock, options.atlas,
+    (x, y, z) => lighting.sample(x, y, z));
 }
 
 /** Bounded pool, no unbounded job queue or main-thread work in browsers. */
@@ -57,7 +66,7 @@ export class EngineWorkers {
     if (!slot) return;
     slot.done = done;
     slot.job = job;
-    slot.worker.postMessage(job, job.kind === 'mesh' ? [job.halo.buffer] : []);
+    slot.worker.postMessage(job, job.kind === 'mesh' ? job.chunks.map(c => c.data.buffer) : []);
   }
   dispose(): void {
     this.disposed = true;

@@ -50,10 +50,12 @@ describe('Welt', () => {
     const { world, meshes } = loadedWorld();
     const update = () => { for (let i = 0; i < 10; i++) world.update({ x: 8, y: 70, z: 8 }, 2); };
     update(); meshes.length = 0;
-    world.setBlock(8, 120, 8, BLOCK.STONE); update();
+    world.setBlock(8, 120, 8, BLOCK.STONE); update(); meshes.length = 0;
+    world.setBlock(8, 120, 8, BLOCK.COBBLESTONE); update();
     expect(meshes.map(m => `${m.cx},${m.cz}`)).toEqual(['0,0']);
     meshes.length = 0;
-    world.setBlock(15, 120, 8, BLOCK.STONE); update();
+    world.setBlock(15, 120, 8, BLOCK.STONE); update(); meshes.length = 0;
+    world.setBlock(15, 120, 8, BLOCK.COBBLESTONE); update();
     expect(meshes.map(m => `${m.cx},${m.cz}`).sort()).toEqual(['0,0', '1,0']);
     world.dispose();
   });

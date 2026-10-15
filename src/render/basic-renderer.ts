@@ -68,6 +68,7 @@ class BasicRenderer implements Renderer {
   private readonly lastSortPosition = new THREE.Vector3(Infinity, Infinity, Infinity);
   private readonly sortEye = new THREE.Vector3();
   private sortDirty = true;
+  private readonly sunLight = { value: 1 };
 
   constructor(options: RendererOptions) {
     if (options.atlas) {
@@ -78,12 +79,18 @@ class BasicRenderer implements Renderer {
       this.atlasTexture.generateMipmaps = false;
       for (const material of Object.values(this.materials)) {
         material.map = this.atlasTexture;
-        material.onBeforeCompile = shader => {
-          shader.fragmentShader = shader.fragmentShader.replace('#include <map_fragment>',
-            '#ifdef USE_MAP\nif (vMapUv.x >= 0.0) {\n#endif\n#include <map_fragment>\n#ifdef USE_MAP\n}\n#endif');
-        };
       }
     }
+    for (const material of Object.values(this.materials)) material.onBeforeCompile = shader => {
+      shader.uniforms.voxelSun = this.sunLight;
+      shader.vertexShader = 'attribute vec2 light; varying vec2 voxelLight;\n' + shader.vertexShader;
+      shader.vertexShader = shader.vertexShader.replace('#include <begin_vertex>', '#include <begin_vertex>\nvoxelLight = light;');
+      shader.fragmentShader = 'uniform float voxelSun; varying vec2 voxelLight;\n' + shader.fragmentShader;
+      shader.fragmentShader = shader.fragmentShader.replace('#include <color_fragment>',
+        '#include <color_fragment>\ndiffuseColor.rgb *= max(voxelLight.x * voxelSun, voxelLight.y);');
+      shader.fragmentShader = shader.fragmentShader.replace('#include <map_fragment>',
+        '#ifdef USE_MAP\nif (vMapUv.x >= 0.0) {\n#endif\n#include <map_fragment>\n#ifdef USE_MAP\n}\n#endif');
+    };
     this.camera.rotation.order = 'YXZ';
     this.scene.background = DAY_SKY.clone();
     this.scene.fog = this.fog;
@@ -165,8 +172,7 @@ class BasicRenderer implements Renderer {
     const far = this.renderDistance * CHUNK_SIZE;
     this.fog.near = camera.underwater ? 2 : far * 0.6;
     this.fog.far = camera.underwater ? 24 : far;
-    const brightness = Math.max(light, 0.25);
-    for (const material of Object.values(this.materials)) material.color.setScalar(brightness);
+    this.sunLight.value = light;
 
     if (this.camera.fov !== camera.fov) {
       this.camera.fov = camera.fov;
