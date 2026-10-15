@@ -12,6 +12,7 @@ import { createTextureAtlas } from './assets';
 import { createRegistry } from './data';
 import { createGame, type Game } from './game';
 import { raycast, stepPlayer } from './physics';
+import { createSaveStore } from './save';
 import { createRenderer } from './render';
 import { createUi } from './ui';
 import { createWorld } from './world';
@@ -42,6 +43,15 @@ function showFatalError(root: HTMLElement, error: unknown): void {
   root.append(box);
 }
 
+const PLACEHOLDER_WORLD = 'Platzhalter-Welt';
+
+/** Lädt die zuletzt gespeicherte Platzhalter-Welt oder legt sie neu an. */
+async function startPlaceholderWorld(game: Game): Promise<void> {
+  const existing = (await game.listWorlds()).find((world) => world.name === PLACEHOLDER_WORLD);
+  if (existing) await game.loadWorld(existing.id);
+  else await game.createWorld({ name: PLACEHOLDER_WORLD, seed: '1', mode: 'creative' });
+}
+
 function start(): void {
   const canvas = document.querySelector<HTMLCanvasElement>('#game');
   const uiRoot = document.querySelector<HTMLElement>('#ui');
@@ -57,7 +67,7 @@ function start(): void {
     return;
   }
 
-  const game = createGame({ registry, renderer, createWorld, stepPlayer, raycast, canvas });
+  const game = createGame({ registry, renderer, createWorld, stepPlayer, raycast, store: createSaveStore(), canvas });
   createUi({ root: uiRoot, game, atlas });
   window.__blockwelt = { game };
 
@@ -66,8 +76,15 @@ function start(): void {
     if (document.pointerLockElement !== canvas) game.onPointerLockLost();
   });
 
-  // Phase 0: Es gibt noch kein Menü – direkt eine Platzhalter-Welt starten.
-  void game.createWorld({ name: 'Platzhalter-Welt', seed: '1', mode: 'creative' });
+  // Beim Verlassen der Seite und beim Wechsel des Tabs speichern (zusätzlich zum Autosave alle 30 s).
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'hidden') void game.saveNow();
+  });
+  window.addEventListener('pagehide', () => void game.saveNow());
+
+  // Solange die Oberfläche kein Menü hat (Phase 0/1): direkt die Platzhalter-Welt laden oder anlegen.
+  // Mit `?menu` in der Adresse wird nichts gestartet (dann übernimmt die Oberfläche).
+  if (!new URLSearchParams(location.search).has('menu')) void startPlaceholderWorld(game);
 
   const tickMs = TICK_SECONDS * 1000;
   const startTime = performance.now();

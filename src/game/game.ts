@@ -66,9 +66,10 @@ import {
   moveContainerSlot,
   type Container,
 } from './container';
+import { ChangeTracker, createMemoryStore, type ChunkChanges, type PlayerSave, type SaveStore } from '../save';
 import { Input } from './input';
 import { consumeIngredients, craftResult } from './crafting';
-import { INVENTORY_SIZE, addItem, canMerge, maxStackOf, removeFromSlot } from './inventory';
+import { INVENTORY_SIZE, addItem, canMerge, emptySlots, maxStackOf, removeFromSlot } from './inventory';
 import { DoubleTap, SprintTracker, buildMovementInput, type MovementKeys } from './movement';
 import { dayTimeFromTicks } from './time';
 import { breakSeconds, breakTicks, canHarvest, damageTool, rollDrop, toolWear } from './tools';
@@ -80,6 +81,8 @@ export interface GameDeps {
   readonly createWorld: CreateWorld;
   readonly stepPlayer: StepPlayer;
   readonly raycast: Raycast;
+  /** Speicher für Welten und Einstellungen. Ohne Angabe: Arbeitsspeicher (geht beim Neuladen verloren). */
+  readonly store?: SaveStore;
   /** Spiel-Canvas (für Pointer-Lock und Eingaben). */
   readonly canvas: HTMLCanvasElement;
 }
@@ -95,6 +98,8 @@ export interface Game extends GameApi {
    * @param elapsed Sekunden seit Start.
    */
   frame(alpha: number, delta: number, elapsed: number): void;
+  /** Speichert die laufende Welt sofort (Autosave, Verlassen der Seite). Tut nichts, wenn keine Welt läuft. */
+  saveNow(): Promise<void>;
   /** Gemessene Bilder pro Sekunde für die Debug-Anzeige. */
   setFps(fps: number): void;
   /** Wird aufgerufen, wenn der Pointer-Lock verloren geht (z. B. durch Esc). */
@@ -109,6 +114,8 @@ const PITCH_LIMIT = Math.PI / 2 - 0.001;
 const DEFAULT_SETTINGS: Settings = { renderDistance: DEFAULT_RENDER_DISTANCE, fov: 70, mouseSensitivity: 1 };
 /** Pause in Ticks zwischen zwei Abbauvorgängen bzw. zwei gesetzten Blöcken bei gehaltener Taste. */
 const ACTION_COOLDOWN_TICKS = 5;
+/** Autosave alle 30 Sekunden. */
+const AUTOSAVE_TICKS = 30 * TICKS_PER_SECOND;
 const START_TICKS = 3000;
 
 function emptyCrafting(size: 2 | 3): CraftingState {
@@ -178,6 +185,11 @@ class StubGame implements Game {
   };
   private state: GameState;
   private dirty = false;
+  private readonly store: SaveStore;
+  private tracker = new ChangeTracker();
+  private stopTracking: (() => void) | null = null;
+  private saveChain: Promise<void> = Promise.resolve();
+  private ticksSinceSave = 0;
   private tickCount = 0;
   private vitals: Vitals = freshVitals();
   private flying = false;
@@ -192,6 +204,13 @@ class StubGame implements Game {
   constructor(deps: GameDeps) {
     this.deps = deps;
     this.registry = deps.registry;
+    this.store = deps.store ?? createMemoryStore();
+    void this.store
+      .loadSettings()
+      .then((saved) => {
+        if (saved) this.applySettings(saved);
+      })
+      .catch(() => {});
     this.input = new Input(deps.canvas);
     this.state = this.buildState();
   }
@@ -253,20 +272,22 @@ class StubGame implements Game {
   // ----- Welten -----
 
   async listWorlds(): Promise<WorldInfo[]> {
-    return this.worldInfo ? [this.worldInfo] : [];
+    return this.store.listWorlds();
   }
 
   async createWorld(options: NewWorldOptions): Promise<WorldInfo> {
     const now = Date.now();
     const info: WorldInfo = {
-      id: `welt-${now}`,
+      id: `welt-${now.toString(36)}-${Math.floor(Math.random() * 0xffffff).toString(36)}`,
       name: options.name.trim() || 'Neue Welt',
       seed: parseSeed(options.seed),
       mode: options.mode,
       createdAt: now,
       lastPlayed: now,
     };
-    this.startWorld(info);
+    await this.store.putWorld(info);
+    await this.saveNow();
+    this.startWorld(info, null, []);
     return info;
   }
 
@@ -275,38 +296,135 @@ class StubGame implements Game {
       this.setScreen('playing');
       return;
     }
-    this.events.emit('message', { text: 'Speichern und Laden gibt es noch nicht.', kind: 'error' });
+    const info = await this.store.getWorld(id);
+    if (!info) {
+      this.events.emit('message', { text: 'Diese Welt gibt es nicht mehr.', kind: 'error' });
+      return;
+    }
+    const [player, changes] = await Promise.all([this.store.loadPlayer(id), this.store.loadChunks(id)]);
+    await this.saveNow();
+    this.startWorld(info, player, changes);
   }
 
-  async deleteWorld(_id: string): Promise<void> {
-    // Phase 0: nichts gespeichert
+  async deleteWorld(id: string): Promise<void> {
+    if (this.worldInfo?.id === id) {
+      this.events.emit('message', { text: 'Die laufende Welt kann nicht gelöscht werden.', kind: 'error' });
+      return;
+    }
+    await this.store.deleteWorld(id);
   }
 
   async quitToTitle(): Promise<void> {
     const info = this.worldInfo;
+    if (!info) return;
+    await this.saveNow();
+    this.stopTracking?.();
+    this.stopTracking = null;
     this.deps.renderer.setWorld(null);
     this.world?.dispose();
     this.world = null;
     this.worldInfo = null;
+    this.resetBreaking();
     this.setScreen('title');
-    if (info) this.events.emit('worldClosed', { world: info });
+    this.events.emit('worldClosed', { world: info });
   }
 
-  /** Startet eine Welt im Speicher (Phase 0: ohne Speichern). */
-  private startWorld(info: WorldInfo): void {
+  /** Speichert Welt-Eintrag, Spieler und alle seit dem letzten Mal veränderten Chunks. Mehrere Aufrufe laufen nacheinander. */
+  saveNow(): Promise<void> {
+    const info = this.worldInfo;
+    if (!info || !this.world) return this.saveChain;
+    this.ticksSinceSave = 0;
+    const updated: WorldInfo = { ...info, lastPlayed: Date.now() };
+    this.worldInfo = updated;
+    const player = this.playerSave();
+    const dirty = this.tracker.takeDirty();
+    this.saveChain = this.saveChain
+      .then(async () => {
+        await this.store.putWorld(updated);
+        await this.store.savePlayer(updated.id, player);
+        await this.store.saveChunks(updated.id, dirty);
+        this.events.emit('saved', { worldId: updated.id });
+      })
+      .catch((error: unknown) => {
+        console.error('Speichern fehlgeschlagen:', error);
+        this.tracker.markDirty(dirty);
+        this.events.emit('message', { text: 'Speichern fehlgeschlagen.', kind: 'error' });
+      });
+    return this.saveChain;
+  }
+
+  private playerSave(): PlayerSave {
+    return {
+      position: { ...this.body.position },
+      yaw: this.yaw,
+      pitch: this.pitch,
+      health: this.vitals.health,
+      air: this.vitals.air,
+      flying: this.flying,
+      selected: this.inventory.selected,
+      inventory: this.inventory.slots.map((s) => (s ? { ...s } : null)),
+      totalTicks: this.totalTicks,
+      spawn: { ...this.spawn },
+    };
+  }
+
+  /** Startet eine Welt: erzeugt sie, spielt gespeicherte Änderungen ein und stellt den Spieler wieder her. */
+  private startWorld(info: WorldInfo, saved: PlayerSave | null, changes: readonly ChunkChanges[]): void {
+    this.stopTracking?.();
     this.world?.dispose();
     this.setScreen('loading');
-    this.world = this.deps.createWorld({ seed: info.seed, blocks: this.registry.blocks, atlas: null });
+    const world = this.deps.createWorld({ seed: info.seed, blocks: this.registry.blocks, atlas: null });
+    this.world = world;
     this.worldInfo = info;
-    this.deps.renderer.setWorld(this.world);
+    this.tracker = new ChangeTracker();
+    this.tracker.load(changes);
+    this.tracker.forEach((x, y, z, block) => world.setBlock(x, y, z, block));
+    this.stopTracking = world.onBlockChanged((c) => this.tracker.record(c.x, c.y, c.z, c.current));
+    this.deps.renderer.setWorld(world);
     this.deps.renderer.setRenderDistance(this.settings.renderDistance);
-    this.vitals = freshVitals();
+    this.ticksSinceSave = 0;
+    this.resetBreaking();
+    this.flyTap.reset();
+    this.sprint.reset();
     this.deathCause = null;
-    this.flying = false;
-    if (info.mode === 'creative') this.inventory = { ...this.inventory, slots: this.creativeStarterItems() };
-    this.placePlayer(this.spawn);
+
+    if (saved) this.restorePlayer(saved);
+    else {
+      this.totalTicks = START_TICKS;
+      this.vitals = freshVitals();
+      this.flying = false;
+      this.inventory = {
+        ...this.inventory,
+        slots: info.mode === 'creative' ? this.creativeStarterItems() : emptySlots(),
+        cursor: null,
+        selected: 0,
+        crafting: emptyCrafting(2),
+      };
+      this.placePlayer(this.spawn);
+    }
     this.setScreen('playing');
     this.events.emit('worldLoaded', { world: info });
+  }
+
+  private restorePlayer(saved: PlayerSave): void {
+    const slots = emptySlots();
+    saved.inventory.slice(0, INVENTORY_SIZE).forEach((stack, i) => {
+      if (stack && this.registry.getItemDef(stack.item)) slots[i] = { ...stack };
+    });
+    this.inventory = {
+      ...this.inventory,
+      slots,
+      cursor: null,
+      selected: clamp(Math.round(saved.selected), 0, 8),
+      crafting: emptyCrafting(2),
+    };
+    this.vitals = { ...freshVitals(), health: clamp(saved.health, 1, MAX_HEALTH), air: clamp(saved.air, 0, MAX_AIR) };
+    this.flying = saved.flying && this.mode === 'creative';
+    this.totalTicks = saved.totalTicks;
+    this.yaw = saved.yaw;
+    this.pitch = clamp(saved.pitch, -PITCH_LIMIT, PITCH_LIMIT);
+    this.spawn = { ...saved.spawn };
+    this.placePlayer(saved.position);
   }
 
   // ----- Bildschirme -----
@@ -382,6 +500,11 @@ class StubGame implements Game {
   }
 
   updateSettings(changes: Partial<Settings>): void {
+    this.applySettings({ ...this.settings, ...changes });
+    void this.store.saveSettings(this.settings).catch(() => {});
+  }
+
+  private applySettings(changes: Partial<Settings>): void {
     this.settings = {
       renderDistance: Math.round(
         clamp(changes.renderDistance ?? this.settings.renderDistance, MIN_RENDER_DISTANCE, MAX_RENDER_DISTANCE),
@@ -515,6 +638,7 @@ class StubGame implements Game {
     const world = this.world;
     if (!world) return;
     if (this.clockRunning()) this.totalTicks++;
+    if (++this.ticksSinceSave >= AUTOSAVE_TICKS) void this.saveNow();
     world.update(this.body.position, this.settings.renderDistance);
 
     this.previousPosition = { ...this.body.position };
