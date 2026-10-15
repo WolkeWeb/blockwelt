@@ -15,7 +15,7 @@ Die Verträge in `src/core/` sind fest. Performance ist wichtig – miss sie, st
       Ambient Occlusion pro Ecke. `setBlock` baut nur betroffene Chunks neu, inkl. Nachbarn an der Grenze.
 - [x] X6 Transparente Blöcke: Wasser (leicht durchsichtig, Oberfläche etwas tiefer), Blätter (alphagetestet), Glas.
       Getrennte Render-Durchgänge, richtige Sortierung.
-- [ ] X7 Physik: AABB-Kollision Achse für Achse, Schwerkraft, Sprung auf ca. 1,25 Blöcke Höhe,
+- [x] X7 Physik: AABB-Kollision Achse für Achse, Schwerkraft, Sprung auf ca. 1,25 Blöcke Höhe,
       Bodenreibung, Schwimmen und langsameres Sinken im Wasser, Schleichen verhindert Fallen von Kanten.
       Unit-Tests für typische Fälle (Wand, Decke, Kante, Treppe aus Blöcken).
 - [ ] X8 Raycast mit DDA-Verfahren: exakter getroffener Block und getroffene Fläche. Unit-Tests.
@@ -26,6 +26,7 @@ Die Verträge in `src/core/` sind fest. Performance ist wichtig – miss sie, st
 - [ ] X11 Auswahlrahmen um den anvisierten Block und Abbau-Risse (10 Stufen) als Overlay.
 - [ ] X12 Performance: Frustum-Culling, Speicher entladener Chunks freigeben, FPS bei Sichtweite 8 messen
       (Playwright oder Dev-Overlay). Engpässe beheben. Messwerte in `notes/codex.md` eintragen.
+
 
 
 
