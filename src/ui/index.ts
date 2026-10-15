@@ -1,36 +1,40 @@
 /**
- * Oberfläche als HTML/CSS-Overlay. Spricht nur mit der GameApi aus src/core/game.ts.
+ * Oberfläche als HTML/CSS-Overlay. Spricht ausschließlich über die `GameApi` aus `src/core/game.ts`.
  * Zuständig: OpenCode
  *
- * PLATZHALTER aus Phase 0: nur ein Fadenkreuz, sichtbar während `screen === 'playing'`.
+ * Aufbau:
+ * - `.bw-hud`     Fadenkreuz, Hotbar, Herzen, Luftblasen, Debug (F3)
+ * - `.bw-overlay` Bildschirme: Start, Weltauswahl, Laden, Pause, Einstellungen, Inventar, Werkbank, Tod
+ *
+ * Die Spiellogik bestimmt den Bildschirm (`GameState.screen`) und wertet E/Esc/F3 aus; die Oberfläche
+ * zeichnet nur und ruft bei Klicks die Aktionen der GameApi auf.
  */
-import type { CreateUi } from '../core';
+import type { CreateUi, GameState } from '../core';
+import './styles.css';
+import { el } from './dom';
+import { createHud } from './hud';
+import { createIconPainter } from './icons';
+import { createTooltip } from './slots';
 
-export const createUi: CreateUi = ({ root, game }) => {
-  const crosshair = document.createElement('div');
-  crosshair.className = 'crosshair';
-  crosshair.setAttribute('aria-hidden', 'true');
-  Object.assign(crosshair.style, {
-    position: 'absolute',
-    left: '50%',
-    top: '50%',
-    width: '18px',
-    height: '18px',
-    transform: 'translate(-50%, -50%)',
-    background:
-      'linear-gradient(#fff, #fff) center / 2px 100% no-repeat, linear-gradient(#fff, #fff) center / 100% 2px no-repeat',
-    mixBlendMode: 'difference',
-  });
-  root.append(crosshair);
+export const createUi: CreateUi = ({ root, game, atlas }) => {
+  const container = el('div', 'bw-root');
+  const painter = createIconPainter(atlas);
+  const tooltip = createTooltip(container);
+  const hud = createHud({ registry: game.registry, game, painter, tooltip });
 
-  const unsubscribe = game.subscribe((state) => {
-    crosshair.style.display = state.screen === 'playing' ? 'block' : 'none';
-  });
+  container.append(hud.element);
+  root.append(container);
+
+  const render = (state: GameState): void => {
+    hud.update(state);
+  };
+
+  const unsubscribe = game.subscribe(render);
 
   return {
     dispose() {
       unsubscribe();
-      crosshair.remove();
+      container.remove();
     },
   };
 };

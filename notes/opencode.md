@@ -18,6 +18,11 @@
 - **O4 – Rezepte:** Werkzeuge nach Lehrbuchmuster (Spitzhacke 3×3, Axt 2×3, Schaufel/Schwert 1×3 –
   letztere passen nur an die Werkbank). Holz-Werkzeuge kosten Bretter, Stein-Werkzeuge Bruchstein.
   Fackel = Kohle über Stock, ergibt 4. Stock = 2 Bretter übereinander, ergibt 4.
+- **O5 – Oberfläche:** Aufbau unter `src/ui/`: `dom.ts` (Helfer), `icons.ts` (Atlas-Symbole über
+  Daten-URL + `background-position`, ohne Atlas Ersatzfarbe), `slots.ts` (Slot, Tooltip, Mauszeiger-Stapel),
+  `hud.ts` (Hotbar), `styles.css`. Slots rufen nur `game.clickSlot`/`moveSlot` auf.
+  Der Atlas wird einmal als Daten-URL gelesen und je Symbol per `background-position` ausgeschnitten
+  (Skalierung 2 → 32 px pro 16-px-Kachel, `image-rendering: pixelated`).
 
 ## Wünsche an die Verträge
 
