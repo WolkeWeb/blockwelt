@@ -27,7 +27,6 @@ import {
   type GameState,
   type InventoryState,
   type ItemStack,
-  type MovementInput,
   type NewWorldOptions,
   type PlayerBody,
   type Raycast,
@@ -43,6 +42,7 @@ import {
   type WorldInfo,
 } from '../core';
 import { Input } from './input';
+import { SprintTracker, buildMovementInput, type MovementKeys } from './movement';
 import { dayTimeFromTicks } from './time';
 
 /** Abhängigkeiten der Spiellogik – alles kommt über die Verträge aus `src/core/`. */
@@ -145,6 +145,8 @@ class StubGame implements Game {
   };
   private state: GameState;
   private dirty = false;
+  private tickCount = 0;
+  private readonly sprint = new SprintTracker();
 
   constructor(deps: GameDeps) {
     this.deps = deps;
@@ -357,6 +359,8 @@ class StubGame implements Game {
   }
 
   tick(): void {
+    this.tickCount++;
+    const wPressed = this.input.consumePress('KeyW');
     this.handleKeys();
     const world = this.world;
     if (!world) return;
@@ -366,15 +370,17 @@ class StubGame implements Game {
     this.previousPosition = { ...this.body.position };
     if (this.screen === 'playing') {
       const key = (code: string) => this.input.isDown(code);
-      const input: MovementInput = {
-        forward: (key('KeyW') ? 1 : 0) - (key('KeyS') ? 1 : 0),
-        strafe: (key('KeyD') ? 1 : 0) - (key('KeyA') ? 1 : 0),
-        yaw: this.yaw,
+      const keys: MovementKeys = {
+        forward: key('KeyW'),
+        back: key('KeyS'),
+        left: key('KeyA'),
+        right: key('KeyD'),
         jump: key('Space'),
         sneak: key('ShiftLeft') || key('ShiftRight'),
-        sprint: key('ControlLeft') || key('ControlRight'),
-        flying: true,
+        ctrl: key('ControlLeft') || key('ControlRight'),
       };
+      const sprinting = this.sprint.update(this.tickCount, wPressed, keys);
+      const input = buildMovementInput(keys, this.yaw, sprinting, true);
       this.deps.stepPlayer(world, this.registry, this.body, input, TICK_SECONDS);
     }
 

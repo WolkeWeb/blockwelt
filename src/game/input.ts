@@ -8,6 +8,8 @@ export class Input {
   private mouseDX = 0;
   private mouseDY = 0;
   private wheel = 0;
+  private readonly buttons = new Set<number>();
+  private readonly clicks = new Set<number>();
   private readonly cleanup: (() => void)[] = [];
 
   constructor(private readonly canvas: HTMLCanvasElement) {
@@ -22,7 +24,19 @@ export class Input {
       this.down.add(event.code);
     });
     on('keyup', (event) => this.down.delete(event.code));
-    on('blur', () => this.down.clear());
+    on('blur', () => {
+      this.down.clear();
+      this.buttons.clear();
+    });
+    on('mousedown', (event) => {
+      if (!this.locked) return;
+      this.buttons.add(event.button);
+      this.clicks.add(event.button);
+    });
+    on('mouseup', (event) => this.buttons.delete(event.button));
+    on('contextmenu', (event) => {
+      if (this.locked) event.preventDefault();
+    });
     on('mousemove', (event) => {
       if (!this.locked) return;
       this.mouseDX += event.movementX;
@@ -64,6 +78,16 @@ export class Input {
     return this.pressed.delete(code);
   }
 
+  /** Ob die Maustaste gerade gehalten wird (0 = links, 2 = rechts). */
+  isButtonDown(button: number): boolean {
+    return this.buttons.has(button);
+  }
+
+  /** Ob die Maustaste seit dem letzten Aufruf neu gedrückt wurde (verbraucht den Klick). */
+  consumeClick(button: number): boolean {
+    return this.clicks.delete(button);
+  }
+
   /** Gesammelte Mausbewegung seit dem letzten Aufruf (in Pixeln) und setzt sie zurück. */
   consumeMouse(): { dx: number; dy: number } {
     const result = { dx: this.mouseDX, dy: this.mouseDY };
@@ -82,6 +106,7 @@ export class Input {
   /** Vergisst alle neuen Tastendrücke (z. B. beim Bildschirmwechsel). */
   clearPresses(): void {
     this.pressed.clear();
+    this.clicks.clear();
   }
 
   dispose(): void {
