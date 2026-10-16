@@ -15,6 +15,7 @@ import {
   TICKS_PER_SECOND,
   TICK_SECONDS,
   BLOCK,
+  DEFAULT_KEY_BINDINGS,
   createEventBus,
   directionFromAngles,
   toChunkCoord,
@@ -115,7 +116,14 @@ export interface Game extends GameApi {
 
 const MOUSE_FACTOR = 0.0025;
 const PITCH_LIMIT = Math.PI / 2 - 0.001;
-const DEFAULT_SETTINGS: Settings = { renderDistance: DEFAULT_RENDER_DISTANCE, fov: 70, mouseSensitivity: 1, volume: 0.8 };
+const DEFAULT_SETTINGS: Settings = {
+  renderDistance: DEFAULT_RENDER_DISTANCE,
+  fov: 70,
+  mouseSensitivity: 1,
+  volume: 0.8,
+  viewBobbing: true,
+  keys: DEFAULT_KEY_BINDINGS,
+};
 /** Pause in Ticks zwischen zwei Abbauvorgängen bzw. zwei gesetzten Blöcken bei gehaltener Taste. */
 const ACTION_COOLDOWN_TICKS = 5;
 /** So lange (in Ticks) wartet das Laden höchstens auf die Chunks um den Spawn-Punkt (20 s). */
@@ -251,6 +259,10 @@ class GameImpl implements Game {
       maxHealth: MAX_HEALTH,
       air: this.vitals.air,
       maxAir: MAX_AIR,
+      // Hunger und Essen folgen in Runde 2 (Aufgabe C17).
+      food: 20,
+      maxFood: 20,
+      eatProgress: 0,
       underwater: this.body.headInWater,
       time: dayTimeFromTicks(this.totalTicks),
       breakProgress: this.breakProgress,
@@ -549,6 +561,9 @@ class GameImpl implements Game {
       fov: clamp(changes.fov ?? this.settings.fov, 30, 110),
       mouseSensitivity: clamp(changes.mouseSensitivity ?? this.settings.mouseSensitivity, 0.1, 3),
       volume: clamp(changes.volume ?? this.settings.volume, 0, 1),
+      viewBobbing: changes.viewBobbing ?? this.settings.viewBobbing,
+      // Prüfen und Auffüllen der Belegung sowie ihre Auswertung: Aufgabe C10 (Runde 2).
+      keys: { ...DEFAULT_KEY_BINDINGS, ...this.settings.keys, ...changes.keys },
     };
     this.deps.renderer.setRenderDistance(this.settings.renderDistance);
     this.dirty = true;

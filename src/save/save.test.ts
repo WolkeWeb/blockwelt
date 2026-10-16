@@ -1,3 +1,4 @@
+import { DEFAULT_KEY_BINDINGS } from '../core';
 import { describe, expect, it } from 'vitest';
 import type { WorldInfo } from '../core';
 import { ChangeTracker, cellIndex, cellPosition } from './changes';
@@ -137,7 +138,7 @@ describe('Speicher (Arbeitsspeicher)', () => {
   it('speichert Einstellungen', async () => {
     const store = createMemoryStore();
     expect(await store.loadSettings()).toBeNull();
-    await store.saveSettings({ renderDistance: 6, fov: 80, volume: 0.5, mouseSensitivity: 1.5 });
-    expect(await store.loadSettings()).toEqual({ renderDistance: 6, fov: 80, volume: 0.5, mouseSensitivity: 1.5 });
+    await store.saveSettings({ renderDistance: 6, fov: 80, volume: 0.5, mouseSensitivity: 1.5, viewBobbing: false, keys: DEFAULT_KEY_BINDINGS });
+    expect(await store.loadSettings()).toEqual({ renderDistance: 6, fov: 80, volume: 0.5, mouseSensitivity: 1.5, viewBobbing: false, keys: DEFAULT_KEY_BINDINGS });
   });
 });

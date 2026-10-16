@@ -80,12 +80,13 @@ test('60 Sekunden spielen: laufen, abbauen, bauen, Inventar', async ({ page }, t
   await shot(page, testInfo, 'spiel-04-abbauen', 40);
   await waitForState(page, 'state.inventory.slots.some((slot) => slot !== null)', 15_000);
   await page.mouse.up();
+  // Nach dem Loslassen setzt der nächste Tick den Fortschritt zurück (evtl. lief schon der nächste Block an).
+  await waitForState(page, 'state.breakProgress === 0', 2_000);
   state = await gameState(page);
   expect(await events()).toContain('blockBroken');
   expect(await events()).toContain('itemPickedUp');
   const picked = state.inventory.slots[0];
   expect(picked, 'Drop liegt im ersten Hotbar-Slot').not.toBeNull();
-  expect(state.breakProgress).toBe(0);
   expect(state.debug.target?.position).not.toEqual(target.position);
   await shot(page, testInfo, 'spiel-05-abgebaut', 40);
 

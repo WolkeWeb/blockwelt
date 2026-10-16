@@ -10,6 +10,7 @@
  */
 
 import type { Registry, TextureAtlas } from './registry';
+import type { ItemId } from './types';
 import type { BlockId, Vec3 } from './types';
 import type { World } from './world';
 
@@ -64,6 +65,32 @@ export interface FrameTime {
   readonly elapsed: number;
 }
 
+/**
+ * Gehaltenes Item für die Ego-Ansicht. Alle Animationswerte berechnet die Spiellogik (bereits zwischen Ticks interpoliert);
+ * der Renderer setzt sie nur in Bewegung um.
+ *
+ * Darstellung (Sache des Renderers): leere Hand = Arm (eigenes, schlichtes Design), Block-Item = kleiner texturierter
+ * Würfel, sonstige Items und Werkzeuge = aus dem Atlas-Symbol (`ItemDef.icon`) ausgestanzte, leicht plastische Pixelgrafik,
+ * Werkzeuge schräg wie gehalten. Unten rechts im Bild, eigenes festes Sichtfeld (unabhängig von `CameraState.fov`),
+ * ragt nie in Wände hinein.
+ */
+export interface HeldItemView {
+  /** Gehaltenes Item oder `null` für die leere Hand. */
+  readonly item: ItemId | null;
+  /** Schlag-Animation 0–1 (0 = Ruhe; läuft beim Abbauen in Schleife, beim Setzen/Klicken einmal durch). */
+  readonly swing: number;
+  /** Ess-Animation 0–1 (Item wandert zum Mund und wippt), 0 = isst nicht. */
+  readonly eat: number;
+  /** Wechsel-Animation 0–1: 1 = ganz unten (gerade gewechselt), 0 = ganz oben (bereit). */
+  readonly equip: number;
+  /** Laufphase in Radiant (wächst mit der gelaufenen Strecke) für das Mitschwingen. */
+  readonly bobPhase: number;
+  /** Stärke des Mitschwingens 0–1 (0 im Stand, beim Fliegen, Schwimmen oder bei ausgeschalteter Bewegungsanimation). */
+  readonly bobAmount: number;
+  /** Helligkeit 0–1 am Spieler (Himmels- bzw. Blocklicht), damit die Hand nachts nicht leuchtet. */
+  readonly light: number;
+}
+
 /** Messwerte für die Debug-Anzeige. */
 export interface RenderStats {
   /** Draw-Calls im letzten Frame. */
@@ -107,6 +134,12 @@ export interface Renderer {
    * aufgerufen. Ein Renderer ohne Partikel darf nichts tun.
    */
   spawnBlockParticles(position: Vec3, block: BlockId): void;
+
+  /**
+   * Was der Spieler in der Hand hält (Ego-Ansicht unten rechts) und wie es sich gerade bewegt.
+   * Wird von der Spiellogik vor jedem `render` aufgerufen. Ein Renderer ohne Hand-Darstellung darf nichts tun.
+   */
+  setHeldItem(view: HeldItemView): void;
 
   /** Messwerte des letzten Frames. */
   getStats(): RenderStats;

@@ -153,6 +153,12 @@ export interface ItemDef {
    * Fehlt das Feld (oder ist es 0), taugt das Item nicht als Brennstoff.
    */
   readonly fuelSeconds?: number;
+  /**
+   * Nahrung: Essen (rechte Maustaste halten, 1,6 s) stellt `nutrition` halbe Hunger-Symbole wieder her;
+   * `saturation` ist die versteckte Reserve, die zuerst verbraucht wird. Fehlt das Feld, ist das Item nicht essbar.
+   * Beispiel Apfel: `{ nutrition: 4, saturation: 2.4 }`.
+   */
+  readonly food?: { readonly nutrition: number; readonly saturation: number };
 }
 
 // ---------------------------------------------------------------------------

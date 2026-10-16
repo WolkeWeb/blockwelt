@@ -56,6 +56,19 @@ Platzhalter entfernt: Der Autostart der „Platzhalter-Welt“ in `main.ts` ist 
 9. Kleinigkeiten: Kohle-Symbol auf dunklem Slot kaum erkennbar; Wolken sind große flache Quader; der Ladebildschirm
    zeigt keinen Fortschritt; E2E-Tests laufen noch nicht in GitHub Actions.
 
+## Rückmeldung aus dem Spieltest (16.10.2026)
+
+| Rückmeldung | Eingeplant in Runde 2 |
+|---|---|
+| Rechtsklick zwischen Inventar-Slots öffnet das Browser-Menü | O11 (ganz oben bei OpenCode) |
+| Sprinten auf Strg ist schlecht, soll umbelegbar sein | C10 (Tastenbelegung, Sprinten standardmäßig auf `R`), O12 (Einstellungen „Steuerung“) |
+| Kaum Animationen beim Laufen | C15 (Kamera schwingt mit, Sprint-Sichtfeld, Landen, Schritte), X13 (Hand schwingt mit) |
+| Keine Hand, Werkzeuge nur in der Hotbar statt in der Hand mit Abbauanimation | C16 (Animationswerte), X13 (Ego-Ansicht mit Arm, Block, Werkzeug, Schlag) |
+| Keine Sounds | O13 (prozedurale Geräusche), Auslöser `footstep`/`swing`/`ate` in C15–C17 |
+| Kein Hunger | C17 (Hunger und Essen), O14 (Anzeige), O16 (Apfel) |
+
+Diese Punkte stehen in allen drei Listen vor den neuen Inhalten (Truhen, Öfen, Wasser, Biome).
+
 ## Vorbereitet für Runde 2 (Verträge in `src/core/` erweitert)
 
 - Neue Block-IDs: `FURNACE` (17), `CHEST` (18), `SNOW` (19), `SANDSTONE` (20), `FLOWING_WATER` (21) – vorerst mit
@@ -64,6 +77,9 @@ Platzhalter entfernt: Der Autostart der „Platzhalter-Welt“ in `main.ts` ist 
 - Bildschirme `furnace` und `chest`, Slot-Bereich `container`, `GameState.container` (`BlockContainerState`).
 - `Settings.volume`, Ereignisse `footstep` und `smelted`, `GameState.pointerLocked`.
 - `Renderer.spawnBlockParticles(position, block)` (zurzeit ohne Wirkung).
+- Nach dem Spieltest ergänzt: `KeyBindings`/`DEFAULT_KEY_BINDINGS`/`RESERVED_KEY_CODES`, `Settings.viewBobbing` und
+  `Settings.keys`, `GameState.food`/`maxFood`/`eatProgress`, Todesursache `starve`, `ItemDef.food`, Ereignisse
+  `ate` und `swing`, `Renderer.setHeldItem(HeldItemView)` (zurzeit ohne Wirkung, Hunger fest auf voll).
 
 **Bewusst noch nicht:** Tiere und Monster. Dafür braucht es einen eigenen Entity-Vertrag (Zustand, Bewegung,
 Darstellung, Schaden), der alle drei Bereiche berührt. Er wird in Phase 2 von Runde 2 vorbereitet, wenn

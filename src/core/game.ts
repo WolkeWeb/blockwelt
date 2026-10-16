@@ -9,7 +9,9 @@
  *   Sie verwaltet Pointer-Lock und den Zustand `screen`.
  * - **Oberfläche** zeichnet ausschließlich den Zustand aus {@link GameApi.getState} (HUD, Inventar, Menüs) und ruft bei
  *   Mausklicks in Menüs und Inventar die Aktionen der GameApi auf. Sie registriert **keine** eigenen Tasten-Listener
- *   für E/Esc/F3 (sonst würde doppelt umgeschaltet); Texteingaben in Formularen (Weltname, Seed) sind natürlich erlaubt.
+ *   für E/Esc/F3 (sonst würde doppelt umgeschaltet); Texteingaben in Formularen (Weltname, Seed) sind natürlich erlaubt,
+ *   ebenso ein kurzzeitiger `keydown`-Listener, solange im Einstellungs-Bildschirm eine neue Taste für die
+ *   Tastenbelegung abgefragt wird (siehe {@link KeyBindings}; das Spiel wertet dort keine Tasten aus).
  *
  * `src/ui/index.ts` exportiert `createUi` mit der Signatur {@link CreateUi}.
  *
@@ -78,6 +80,40 @@ export interface NewWorldOptions {
 }
 
 /** Einstellungen (werden von der Spiellogik gespeichert). */
+/**
+ * Aktionen, die der Spieler auf eigene Tasten legen kann. `Esc`, `F3`, `1`–`9` und die Maustasten sind fest.
+ * - `sprint`: Sprinten, solange die Taste gehalten wird und vorwärts gelaufen wird (zusätzlich immer: zweimal schnell vorwärts).
+ * - `inventory`: Inventar öffnen und schließen.
+ */
+export type KeyAction = 'forward' | 'back' | 'left' | 'right' | 'jump' | 'sneak' | 'sprint' | 'inventory';
+
+/**
+ * Tastenbelegung: Aktion → `KeyboardEvent.code` (layoutunabhängig, z. B. `"KeyW"`, `"Space"`, `"ShiftLeft"`).
+ * Regeln: Jede Taste gehört höchstens einer Aktion – belegt der Spieler eine schon benutzte Taste neu, tauscht die
+ * Oberfläche die beiden Belegungen. `Escape`, `F3`, `Digit1`–`Digit9` sowie `ControlLeft`/`ControlRight` und
+ * `MetaLeft`/`MetaRight` sind nicht belegbar (Browser-Kürzel wie Strg+W). Fehlende oder ungültige Einträge ersetzt die
+ * Spiellogik beim Laden durch {@link DEFAULT_KEY_BINDINGS}.
+ */
+export type KeyBindings = Readonly<Record<KeyAction, string>>;
+
+/** Standard-Tastenbelegung. Sprinten liegt bewusst nicht auf Strg (Strg+W schließt im Browser den Tab). */
+export const DEFAULT_KEY_BINDINGS: KeyBindings = {
+  forward: 'KeyW',
+  back: 'KeyS',
+  left: 'KeyA',
+  right: 'KeyD',
+  jump: 'Space',
+  sneak: 'ShiftLeft',
+  sprint: 'KeyR',
+  inventory: 'KeyE',
+};
+
+/** Tasten, die nie belegt werden dürfen (siehe {@link KeyBindings}). */
+export const RESERVED_KEY_CODES: readonly string[] = [
+  'Escape', 'F3', 'ControlLeft', 'ControlRight', 'MetaLeft', 'MetaRight',
+  'Digit1', 'Digit2', 'Digit3', 'Digit4', 'Digit5', 'Digit6', 'Digit7', 'Digit8', 'Digit9',
+];
+
 export interface Settings {
   /** Sichtweite in Chunks, 2–16 (Standard 8). */
   readonly renderDistance: number;
@@ -87,6 +123,10 @@ export interface Settings {
   readonly mouseSensitivity: number;
   /** Lautstärke der Geräusche 0–1 (Standard 0,8; 0 = stumm). */
   readonly volume: number;
+  /** Bewegungsanimation: Kamera und Hand schwingen beim Gehen mit (Standard `true`). */
+  readonly viewBobbing: boolean;
+  /** Tastenbelegung (Standard {@link DEFAULT_KEY_BINDINGS}). `updateSettings({ keys })` ersetzt die ganze Belegung. */
+  readonly keys: KeyBindings;
 }
 
 /**
@@ -197,6 +237,15 @@ export interface GameState {
   readonly air: number;
   /** Maximale Luft (300 Ticks = 15 s). */
   readonly maxAir: number;
+  /**
+   * Sättigung (Hunger-Anzeige) 0–`maxFood`, in halben Symbolen. Nur im Überleben relevant; im Kreativmodus immer voll.
+   * Unter 7 kann man nicht sprinten, bei 0 nimmt man Schaden, ab 18 heilt man.
+   */
+  readonly food: number;
+  /** Maximale Sättigung (20 = 10 Symbole). */
+  readonly maxFood: number;
+  /** Fortschritt des Essens 0–1, solange die rechte Maustaste mit Nahrung gehalten wird, sonst 0. */
+  readonly eatProgress: number;
   /** Kopf unter Wasser – nur dann werden Luftblasen angezeigt. */
   readonly underwater: boolean;
   /** Tageszeit. */
@@ -220,7 +269,7 @@ export interface GameState {
 }
 
 /** Ursache von Schaden. */
-export type DamageCause = 'fall' | 'drown' | 'void' | 'other';
+export type DamageCause = 'fall' | 'drown' | 'void' | 'starve' | 'other';
 
 /** Alle Ereignisse der Spiellogik. Abonnieren über `game.events.on(name, listener)`. */
 export interface GameEvents {
@@ -256,6 +305,10 @@ export interface GameEvents {
   footstep: { readonly block: BlockId };
   /** Ofen hat einen Schmelzvorgang beendet. */
   smelted: { readonly stack: ItemStack };
+  /** Spieler hat etwas gegessen (ein Stück der Nahrung). */
+  ate: { readonly item: string };
+  /** Schlag mit der Hand bzw. dem gehaltenen Item (Abbauen, Setzen, Klick in die Luft) – für Geräusche. */
+  swing: Record<string, never>;
 }
 
 /** Schnittstelle der Spiellogik für die Oberfläche. */

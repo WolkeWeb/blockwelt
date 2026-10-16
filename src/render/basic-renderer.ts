@@ -13,6 +13,7 @@ import {
   type ChunkMesh,
   type CreateRenderer,
   type FrameTime,
+  type HeldItemView,
   type MeshBuffers,
   type RenderStats,
   type Renderer,
@@ -222,6 +223,10 @@ class BasicRenderer implements Renderer {
 
   spawnBlockParticles(_position: Vec3, _block: BlockId): void {
     // Partikel folgen in Runde 2 (Aufgabe X16). Bis dahin erlaubt der Vertrag, nichts zu tun.
+  }
+
+  setHeldItem(_view: HeldItemView): void {
+    // Hand und gehaltenes Item folgen in Runde 2 (Aufgabe X13). Bis dahin erlaubt der Vertrag, nichts zu tun.
   }
 
   getStats(): RenderStats {
